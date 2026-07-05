@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Read from environment variables, fallback to user's provided credentials
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://zcagvktgitwmrccikgas.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_swhL5N6SWjiiP1xchzdV_A_bCCCIbvB';
+// Read from environment variables only
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Create a single supabase client for the app
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
