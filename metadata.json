@@ -1,0 +1,6 @@
+{
+  "name": "Construction Mart",
+  "description": "A comprehensive marketplace connecting clients, vendors, and channel partners for construction, interior, and home services with AI-powered assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
