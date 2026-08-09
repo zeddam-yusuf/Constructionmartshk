@@ -38,7 +38,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
       setTimeout(() => {
         const botReply = { 
           role: 'bot' as const, 
-          text: `As a Construction Mart vendor, you can manage regional rates, labor strength, and generate estimations. To get started, navigate to your 'Vendor Profile' and fill in your regional details. Our 10% platform fee is applied to completed projects.`
+          text: `As a Construction Mart SHK vendor, you can manage regional rates, labor strength, and generate estimations. To get started, navigate to your 'Vendor Profile' and fill in your regional details. Our 10% platform fee is applied to completed projects.`
         };
         setMessages(prev => [...prev, botReply]);
       }, 1000);

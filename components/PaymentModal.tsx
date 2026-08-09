@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
 import { CreditCard, Lock, ShieldCheck, X, Loader2 } from 'lucide-react';
+import Logo from './Logo';
 
 interface PaymentModalProps {
   project: Project;
@@ -34,14 +35,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ project, onClose, onSuccess
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="bg-gray-50 border-b border-gray-100 p-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 text-gray-800">
-            <ShieldCheck className="text-green-600" size={20} />
-            <span className="font-bold">Secure Payment Gateway</span>
+        <div className="bg-gray-50 border-b border-gray-100 px-5 py-3.5 flex justify-between items-center">
+          <Logo size="xs" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full font-semibold">
+              <ShieldCheck className="text-green-600" size={14} />
+              <span>Secure Escrow</span>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200/50">
+              <X size={18} />
+            </button>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
         </div>
 
         <div className="p-6">

@@ -12,6 +12,7 @@ import QuotationGenerator from './components/QuotationGenerator';
 import RateExplorer from './components/RateExplorer';
 import { BrokersPoint } from './components/BrokersPoint';
 import { ConstructionServicesPortal } from './components/ConstructionServicesPortal';
+import { InstantLaboursSection } from './components/InstantLaboursSection';
 import { LabourProfile } from './components/LabourProfile';
 import { ClientProfile } from './components/ClientProfile';
 import { SupplierProfile } from './components/SupplierProfile';
@@ -19,6 +20,18 @@ import { JobProfile } from './components/JobProfile';
 import { VendorProfile } from './components/VendorProfile';
 import SupplierDashboard from './components/SupplierDashboard';
 import { fetchAllBookings, saveBooking, saveSubmission } from './services/supabase';
+import developerSymbolImg from './src/assets/images/developer_symbol_1785094433237.jpg';
+import vendorSymbolImg from './src/assets/images/vendor_symbol_1785094447958.jpg';
+import labourSymbolImg from './src/assets/images/labour_symbol_1785094461353.jpg';
+import supplierSymbolImg from './src/assets/images/supplier_symbol_1785094473667.jpg';
+import jobSymbolImg from './src/assets/images/job_symbol_1785094488725.jpg';
+import freelancerSymbolImg from './src/assets/images/freelancer_symbol_1785171686295.jpg';
+import pmcSymbolImg from './src/assets/images/pmc_symbol_1785866168151.jpg';
+import brokerSymbolImg from './src/assets/images/broker_symbol_1785866178809.jpg';
+import { FreelancerProfile } from './components/FreelancerProfile';
+import { PMCProfile } from './components/PMCProfile';
+import { BrokerProfile } from './components/BrokerProfile';
+import Logo from './components/Logo';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -454,7 +467,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     senderId: 'admin',
     senderName: 'System Admin',
     senderRole: 'Admin',
-    text: 'Welcome to Construction Mart! Post a request to get started.',
+    text: 'Welcome to Construction Mart SHK! Post a request to get started.',
     timestamp: new Date().toISOString()
   }
 ];
@@ -583,6 +596,22 @@ const DETAILED_SERVICES = [
       "PT supervisor", "RMC Sr. Engineer", "RMC Jr. Engineer", "RMC Supervisor", "RMC pump operator",
       "RMC quality engineer"
     ]
+  },
+  {
+    category: "PMC & Quality Supervision",
+    items: [
+      "Daily Site Progress (DPR)", "Contractor MB Measurement Audit", "RA Bill Physical Verification",
+      "Concrete Cube 7/28-Day Strength QA", "Rebar Lap & Cover Inspection", "Waterproofing Ponding Audits",
+      "Tender Preparation & BOQ Control", "Defect Liability & Snag Clearance"
+    ]
+  },
+  {
+    category: "Brokers Point (Real Estate)",
+    items: [
+      "Residential Luxury Apartments", "Grade-A Pre-Leased Commercial (8-9% ROI)", "Society Redevelopment JV & DM",
+      "Industrial Logistics & Land Parcels", "RERA Brokerage Payout Calculator", "Developer Direct Mandates",
+      "Escrow Protected Settlements", "High-Yield Retail Shops"
+    ]
   }
 ];
 
@@ -595,11 +624,8 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-orange-600 text-white p-1 rounded">
-                <Hammer size={16} />
-              </div>
-              <span className="text-lg font-bold text-gray-900">Construction Mart</span>
+            <div className="mb-4">
+              <Logo size="sm" />
             </div>
             <p className="text-sm text-gray-500">
               The most trusted marketplace for construction and interior renovation needs.
@@ -652,11 +678,54 @@ const Footer = () => {
         </div>
         
         <div className="border-t border-gray-200 mt-8 pt-8 text-center text-sm text-gray-400">
-          &copy; {new Date().getFullYear()} Construction Mart. All rights reserved.
+          &copy; {new Date().getFullYear()} Construction Mart SHK. All rights reserved.
         </div>
       </div>
     </footer>
   );
+};
+
+export const ROLE_SYMBOLS: Record<UserRole, { img: string; label: string; desc: string }> = {
+  [UserRole.CLIENT]: {
+    img: developerSymbolImg,
+    label: 'Developer',
+    desc: 'I want to hire services & post civil projects'
+  },
+  [UserRole.VENDOR]: {
+    img: vendorSymbolImg,
+    label: 'Vendor',
+    desc: 'I offer contracting & general civil works'
+  },
+  [UserRole.PMC]: {
+    img: pmcSymbolImg,
+    label: 'PMC',
+    desc: 'Project Management Consultant / Site Supervision / RA Bill & Quality Audits'
+  },
+  [UserRole.LABOUR]: {
+    img: labourSymbolImg,
+    label: 'Labour/ Sub Contractor',
+    desc: 'I am a technician/helper seeking shift bookings'
+  },
+  [UserRole.MATERIAL_SUPPLIER]: {
+    img: supplierSymbolImg,
+    label: 'Material Supplier',
+    desc: 'I supply raw building materials, tools & gear'
+  },
+  [UserRole.JOB]: {
+    img: jobSymbolImg,
+    label: 'Job',
+    desc: 'I am seeking recruitment or engineering projects'
+  },
+  [UserRole.FREELANCER]: {
+    img: freelancerSymbolImg,
+    label: 'Freelancer',
+    desc: 'Drafting plans/3D elevations, steel BBS, billing & advisory'
+  },
+  [UserRole.BROKER]: {
+    img: brokerSymbolImg,
+    label: 'Brokers (Real Estate)',
+    desc: 'RERA Real Estate Agents / Outright Properties / Commercial Mandates'
+  }
 };
 
 const RoleSelection = ({ 
@@ -672,6 +741,7 @@ const RoleSelection = ({
 }) => {
   const [showRegister, setShowRegister] = useState(false);
   const [regRole, setRegRole] = useState<UserRole | null>(null);
+  const [selectedServiceModal, setSelectedServiceModal] = useState<'brokersPoint' | 'pmc' | null>(null);
 
   // Registration form states
   const [fullName, setFullName] = useState('');
@@ -691,9 +761,12 @@ const RoleSelection = ({
     // Initialize default category depending on selected role
     if (role === UserRole.LABOUR) setCategory('Labour');
     else if (role === UserRole.VENDOR) setCategory('Contractor');
+    else if (role === UserRole.PMC) setCategory('Project Management Consultant (PMC)');
     else if (role === UserRole.MATERIAL_SUPPLIER) setCategory('Material Supplier');
     else if (role === UserRole.JOB) setCategory('Civil Engineer');
-    else setCategory('Customer');
+    else if (role === UserRole.FREELANCER) setCategory('Freelance Consultant');
+    else if (role === UserRole.BROKER) setCategory('Real Estate Broker / Channel Partner');
+    else setCategory('Developer / Client');
   };
 
   const handleSubmitRegistration = async (e: React.FormEvent) => {
@@ -734,10 +807,31 @@ const RoleSelection = ({
   const RegistrationModal = () => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
-          <h3 className="text-xl font-bold text-gray-900">
-            Register Profile ({regRole === UserRole.CLIENT ? 'Developer' : regRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : regRole})
-          </h3>
+        <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+          <div className="flex items-center gap-3">
+            {regRole && ROLE_SYMBOLS[regRole] && (
+              <img 
+                src={ROLE_SYMBOLS[regRole].img} 
+                alt={regRole} 
+                className="w-12 h-12 rounded-xl object-cover ring-2 ring-orange-400 shadow-md shrink-0" 
+              />
+            )}
+            <div>
+              <h3 className="text-lg font-extrabold text-gray-900">
+                Register Profile
+              </h3>
+              <p className="text-xs text-orange-600 font-bold">
+                {regRole === UserRole.CLIENT ? 'Developer' : 
+                 regRole === UserRole.VENDOR ? 'Vendor' : 
+                 regRole === UserRole.PMC ? 'PMC / Project Management Consultant' : 
+                 regRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : 
+                 regRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' : 
+                 regRole === UserRole.JOB ? 'Job / Engineering Candidate' : 
+                 regRole === UserRole.FREELANCER ? 'Freelancer' : 
+                 regRole === UserRole.BROKER ? 'Brokers (Real Estate)' : regRole}
+              </p>
+            </div>
+          </div>
           <button onClick={() => setShowRegister(false)} className="text-gray-400 hover:text-gray-600">
             <X size={20}/>
           </button>
@@ -769,17 +863,17 @@ const RoleSelection = ({
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              {regRole === UserRole.LABOUR || regRole === UserRole.JOB 
-                ? 'Company Name (Optional)' 
-                : 'Company Name *'}
+              {regRole === UserRole.LABOUR || regRole === UserRole.JOB || regRole === UserRole.FREELANCER 
+                ? 'Company / Practice Name (Optional)' 
+                : regRole === UserRole.BROKER ? 'Broker Agency / Firm Name (Optional)' : 'Company Name *'}
             </label>
             <input 
               type="text" 
               className="w-full p-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" 
-              placeholder="e.g. Apex Infra Structures" 
+              placeholder={regRole === UserRole.PMC ? 'e.g. Apex PMC & Civil Audit Ltd' : regRole === UserRole.BROKER ? 'e.g. Prime Crest Real Estate Advisory' : 'e.g. Apex Engineering / Studio'} 
               value={companyName}
               onChange={e => setCompanyName(e.target.value)}
-              required={regRole !== UserRole.LABOUR && regRole !== UserRole.JOB}
+              required={regRole !== UserRole.LABOUR && regRole !== UserRole.JOB && regRole !== UserRole.FREELANCER && regRole !== UserRole.BROKER}
             />
           </div>
 
@@ -826,11 +920,11 @@ const RoleSelection = ({
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <div className="bg-orange-600 text-white p-2 rounded-lg shadow-sm">
-             <Hammer size={28} />
-          </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Construction Mart</h1>
+        <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-200">
+          <Logo size="lg" />
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+            India's Leading Construction & Interior Marketplace
+          </span>
         </div>
 
         {/* Ads Carousel */}
@@ -843,51 +937,52 @@ const RoleSelection = ({
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
               <p className="text-gray-500 mb-6">Please select your role to login to your dashboard.</p>
               
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {[
-                  { role: UserRole.CLIENT, label: 'Developer', desc: 'I want to hire services' },
-                  { role: UserRole.VENDOR, label: 'Vendor', desc: 'I offer contracting & general works' },
-                  { role: UserRole.LABOUR, label: 'Labour/ Sub Contractor', desc: 'I am a helper seeking bookings' },
-                  { role: UserRole.MATERIAL_SUPPLIER, label: 'Material Supplier', desc: 'I supply building materials & tools' },
-                  { role: UserRole.JOB, label: 'Job', desc: 'I am seeking recruitment or projects' },
-                ].map((item) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
+                {Object.entries(ROLE_SYMBOLS).map(([roleKey, item]) => (
                   <button
-                    key={item.role}
-                    onClick={() => onSelect(item.role)}
-                    className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 flex flex-col items-center text-center group"
+                    key={roleKey}
+                    onClick={() => onSelect(roleKey as UserRole)}
+                    className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-150 hover:border-orange-400 flex flex-col items-center text-center group hover:-translate-y-1 relative overflow-hidden"
                   >
-                    <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-50 transition-colors">
-                      <User className="text-gray-600 group-hover:text-orange-600" size={28} />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 mb-3 rounded-2xl overflow-hidden shadow-md ring-2 ring-gray-100 group-hover:ring-orange-500 transition-all">
+                      <img 
+                        src={item.img} 
+                        alt={item.label} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-800 mb-1">{item.label} Login</h3>
-                    <p className="text-[10px] text-gray-500 min-h-[1.5rem] leading-tight">{item.desc}</p>
+                    <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 mb-1 group-hover:text-orange-600 transition-colors">
+                      {item.label} Login
+                    </h3>
+                    <p className="text-[10px] text-gray-500 font-medium min-h-[2.25rem] leading-tight">
+                      {item.desc}
+                    </p>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-orange-50 to-white rounded-2xl p-6 border border-orange-100">
+            <div className="bg-gradient-to-r from-orange-50 to-white rounded-2xl p-6 border border-orange-100 shadow-sm">
                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-1">Join Our Platform</h3>
-                    <p className="text-sm text-gray-600">Create an account today to get started with your projects.</p>
+                    <p className="text-sm text-gray-600">Create a verified account today to start listing or hiring.</p>
                   </div>
                   <div className="flex flex-wrap gap-2.5 justify-center">
-                     <button onClick={() => handleRegister(UserRole.CLIENT)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
-                        <UserPlus size={14} /> Developer Registration
-                     </button>
-                     <button onClick={() => handleRegister(UserRole.VENDOR)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
-                        <UserPlus size={14} /> Vendor Registration
-                     </button>
-                     <button onClick={() => handleRegister(UserRole.LABOUR)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors border-orange-200 hover:border-orange-350">
-                        <UserPlus size={14} /> Labour/ Sub Contractor Registration
-                     </button>
-                     <button onClick={() => handleRegister(UserRole.MATERIAL_SUPPLIER)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors border-orange-200 hover:border-orange-350 bg-orange-50">
-                        <UserPlus size={14} /> Material Supplier Registration
-                     </button>
-                     <button onClick={() => handleRegister(UserRole.JOB)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors border-orange-200 hover:border-orange-350">
-                        <UserPlus size={14} /> Job Registration
-                     </button>
+                     {Object.entries(ROLE_SYMBOLS).map(([roleKey, item]) => (
+                       <button 
+                         key={roleKey}
+                         onClick={() => handleRegister(roleKey as UserRole)} 
+                         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-orange-400 rounded-xl text-xs font-bold text-gray-800 hover:bg-orange-50/50 shadow-sm transition-all"
+                       >
+                         <img 
+                           src={item.img} 
+                           alt={item.label} 
+                           className="w-5 h-5 rounded-full object-cover shrink-0 ring-1 ring-orange-300" 
+                         />
+                         <span>{item.label} Registration</span>
+                       </button>
+                     ))}
                   </div>
                </div>
             </div>
@@ -912,8 +1007,316 @@ const RoleSelection = ({
               </button>
             </div>
 
-            {/* Broker's Point Section */}
-            <BrokersPoint />
+            {/* Additional Services & Specialized Portals Section (Dedicated Service Pages for all 8 verticals) */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 bg-orange-100 text-orange-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
+                      Specialized Service Pages
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-extrabold text-gray-900 tracking-tight mt-1">
+                    Explore Platform Services & Dedicated Portals
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Access dedicated service pages and tools for Developers, Vendors, PMC, Labour, Material Suppliers, Job Seekers, Freelancers, and Real Estate Brokers.
+                  </p>
+                </div>
+              </div>
+
+              {/* 8 Verticals Service Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Developer Service Portal */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.CLIENT].img} alt="Developer" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Developer & Client Portal</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Civil Tenders & Project Escrow</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 01
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Post multi-crore civil works, tender BOQ specifications, hire certified turnkey vendors, and track escrow payments with milestone safety.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> AI Project Scope & BOQ Generator</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Verified Labour Force Dispatch</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => onSelect(UserRole.CLIENT)}
+                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>Launch Developer Portal</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                {/* 2. Vendor & Contractor Hub */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.VENDOR].img} alt="Vendor" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Vendor & Contractor Hub</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Turnkey Contracting & Estimates</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 02
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Access direct developer requirement feeds, submit competitive bids with 0% middleman fees, and generate verified BOQ quotations.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Automated BOQ Rate & Quotation Engine</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Direct Client Chat & Bidding Station</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => onSelect(UserRole.VENDOR)}
+                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>Launch Vendor Portal</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                {/* 3. PMC (Project Management Consultancy) */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.PMC].img} alt="PMC" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">PMC & Quality Supervision</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Site QA/QC & RA Bill Audits</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 03
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Independent Project Management Consultants for resident civil supervision, concrete cube testing, reinforcement lap audits & RA bill clearance.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Active Snag & Non-Conformance Log (NCR)</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> RA Bill Physical Measurement Book Audit</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => setSelectedServiceModal('pmc')}
+                      className="py-2 px-3 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span>Explore Service Page</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.PMC)}
+                      className="py-2 px-3 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span>PMC Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Labour & Sub-Contractor Station */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.LABOUR].img} alt="Labour" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Labour & Sub-Contractor Hub</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Instant Daily Shift Deployment</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 04
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Hire certified masons, bar benders, shuttering carpenters, painters, electricians and helpers for immediate same-day site deployment.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Shift Booking & Direct Dispatch</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Transparent Regional Standard Wages</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => onSelect(UserRole.LABOUR)}
+                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>Launch Labour Portal</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                {/* 5. Material Supplier Hub */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.MATERIAL_SUPPLIER].img} alt="Supplier" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Material Supplier Marketplace</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Bulk Raw Materials Direct B2B</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 05
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Procure OPC/PPC Cement, Fe550D TMT Steel, RMC Ready Mix Concrete, River/Crushed Sand, Aggregates and heavy equipment at factory prices.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Direct Wholesale Manufacturer Rates</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Truckload & Yard Logistics Dispatch</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => onSelect(UserRole.MATERIAL_SUPPLIER)}
+                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>Launch Supplier Portal</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                {/* 6. Job & Recruitment Placement */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.JOB].img} alt="Job" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Placement & Job Board</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Civil Engineering Careers</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 06
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Recruitment board connecting site engineers, QA/QC managers, safety officers, quantity surveyors, and crane operators directly with developers.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> 100% Direct Recruiter Interview Calls</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Transparent Experience-Based Packages</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => onSelect(UserRole.JOB)}
+                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>Launch Job Placement Portal</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                {/* 7. Freelancer Advisory & CAD */}
+                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.FREELANCER].img} alt="Freelancer" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Freelancer Engineering & CAD</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">AutoCAD Blueprints & BBS</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 07
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Hire freelance architectural draftsmen, 3D elevation specialists, Bar Bending Schedule (BBS) steel estimators, and structural consultants.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Milestone-based Deliverables & Proofing</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Quantity Surveying & BOQ Verification</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => onSelect(UserRole.FREELANCER)}
+                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span>Launch Freelancer Portal</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                {/* 8. Brokers Point (Real Estate Advisory) */}
+                <div className="bg-gradient-to-br from-orange-500/10 via-amber-50 to-white border-2 border-orange-400/80 rounded-2xl p-5 transition-all flex flex-col justify-between shadow-sm hover:shadow-md group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-orange-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider shadow-sm">
+                    Featured Marketplace
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md ring-2 ring-orange-400 shrink-0">
+                          <img src={ROLE_SYMBOLS[UserRole.BROKER].img} alt="Brokers Point" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Brokers Point — Real Estate</h4>
+                          <span className="text-[10px] text-orange-700 font-bold">RERA Mandates & Asset Advisory</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-700 leading-relaxed mb-3 font-medium">
+                      Verified luxury residential apartments, pre-leased Grade-A commercial office floors (8-9% ROI), society redevelopment mandates & land JV advisory.
+                    </p>
+                    <ul className="text-[11px] text-gray-600 space-y-1 mb-4 font-medium">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-600" /> Live Real Estate Property Inventory & Filters</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-600" /> Interactive Brokerage Commission Calculator</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => setSelectedServiceModal('brokersPoint')}
+                      className="py-2.5 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-md active:scale-95"
+                    >
+                      <Building2 size={14} />
+                      <span>Explore Brokers Point</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.BROKER)}
+                      className="py-2.5 px-3 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span>Broker Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right Sidebar: Services List */}
@@ -944,8 +1347,11 @@ const RoleSelection = ({
                 ))}
               </div>
               <div className="p-4 bg-gray-50 text-center border-t border-gray-100">
-                <button className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center justify-center gap-1">
-                  View Full Service Catalog <ArrowRight size={12} />
+                <button 
+                  onClick={() => setSelectedServiceModal('brokersPoint')}
+                  className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center justify-center gap-1 w-full py-1"
+                >
+                  Explore Brokers Point & Full Catalog <ArrowRight size={12} />
                 </button>
               </div>
             </div>
@@ -956,6 +1362,124 @@ const RoleSelection = ({
       <Footer />
       
       {showRegister && <RegistrationModal />}
+
+      {/* Dedicated Service Page Modal: Brokers Point (Real Estate) */}
+      {selectedServiceModal === 'brokersPoint' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex flex-col items-center justify-start p-2 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-50 w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200 my-auto max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-orange-600 to-amber-600 text-white flex items-center justify-between sticky top-0 z-20 shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 shadow-sm">
+                  <img src={ROLE_SYMBOLS[UserRole.BROKER].img} alt="Brokers Point" className="w-full h-full object-cover rounded-lg" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                    Brokers Point — Real Estate & Asset Mandates Service Page
+                  </h2>
+                  <p className="text-[11px] text-orange-100 font-medium">
+                    Verified Residential & Commercial Properties, Society Redevelopment, Land JV & Brokerage Tools
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setSelectedServiceModal(null);
+                    onSelect(UserRole.BROKER);
+                  }}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-800 hover:bg-orange-50 rounded-xl text-xs font-black transition-all shadow-sm"
+                >
+                  <UserCircle size={15} />
+                  <span>Login as Broker</span>
+                </button>
+                <button 
+                  onClick={() => setSelectedServiceModal(null)}
+                  className="p-2 bg-black/20 hover:bg-black/35 rounded-xl text-white transition-all active:scale-95"
+                  title="Close Service Page"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+              <BrokersPoint />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+              <span>Direct RERA real estate mandates with guaranteed escrow payout safety.</span>
+              <button 
+                onClick={() => setSelectedServiceModal(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition-all"
+              >
+                Back to Homepage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Service Page Modal: PMC (Project Management Consultancy) */}
+      {selectedServiceModal === 'pmc' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex flex-col items-center justify-start p-2 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-50 w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200 my-auto max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-orange-600 to-amber-600 text-white flex items-center justify-between sticky top-0 z-20 shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 shadow-sm">
+                  <img src={ROLE_SYMBOLS[UserRole.PMC].img} alt="PMC" className="w-full h-full object-cover rounded-lg" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                    PMC (Project Management Consultancy) & Quality Audit Service Page
+                  </h2>
+                  <p className="text-[11px] text-orange-100 font-medium">
+                    Resident Civil Supervision, Concrete QA/QC, RA Bill Verification & Site Snagging Registers
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setSelectedServiceModal(null);
+                    onSelect(UserRole.PMC);
+                  }}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-800 hover:bg-orange-50 rounded-xl text-xs font-black transition-all shadow-sm"
+                >
+                  <UserCircle size={15} />
+                  <span>Login as PMC</span>
+                </button>
+                <button 
+                  onClick={() => setSelectedServiceModal(null)}
+                  className="p-2 bg-black/20 hover:bg-black/35 rounded-xl text-white transition-all active:scale-95"
+                  title="Close Service Page"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+              <PMCProfile />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+              <span>Professional quality control & technical civil engineering auditing for high-rise buildings.</span>
+              <button 
+                onClick={() => setSelectedServiceModal(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition-all"
+              >
+                Back to Homepage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1240,11 +1764,8 @@ const App: React.FC = () => {
                <button onClick={goForward} className="p-1 hover:text-gray-700 hover:bg-gray-100 rounded"><ChevronRight size={20}/></button>
             </div>
 
-            <div className="flex items-center gap-2 ml-2 min-w-max">
-              <div className="bg-orange-600 text-white p-1.5 rounded-lg">
-                <Hammer size={20} />
-              </div>
-              <span className="text-xl font-bold text-gray-800 hidden sm:block">Construction Mart</span>
+            <div className="flex items-center gap-2 ml-2 min-w-max cursor-pointer" onClick={() => setCurrentRole(null)}>
+              <Logo size="sm" />
             </div>
           </div>
 
@@ -1263,9 +1784,18 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-             <div className="hidden md:flex items-center bg-gray-100 rounded-full px-4 py-1.5 border border-gray-200">
-                <span className="text-xs font-semibold text-gray-500 mr-2">ROLE:</span>
-                <span className="text-sm font-bold text-orange-600">{currentRole}</span>
+             <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 rounded-full px-3.5 py-1 border border-orange-200 shadow-sm">
+                <span className="text-[10px] font-black tracking-wider text-gray-500 uppercase">ROLE:</span>
+                {currentRole && ROLE_SYMBOLS[currentRole] && (
+                  <img 
+                    src={ROLE_SYMBOLS[currentRole].img} 
+                    alt={currentRole} 
+                    className="w-7 h-7 rounded-full object-cover ring-2 ring-orange-500 shrink-0 shadow-sm" 
+                  />
+                )}
+                <span className="text-xs font-black text-orange-700 uppercase tracking-wide">
+                  {currentRole === UserRole.CLIENT ? 'Developer' : currentRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : currentRole === UserRole.FREELANCER ? 'Freelancer' : currentRole}
+                </span>
              </div>
 
             {/* WhatsApp Directory */}
@@ -1471,9 +2001,12 @@ const App: React.FC = () => {
             <div className="space-y-6">
               {currentRole === UserRole.CLIENT && <ClientProfile />}
               {currentRole === UserRole.VENDOR && <VendorProfile />}
+              {currentRole === UserRole.PMC && <PMCProfile />}
               {currentRole === UserRole.LABOUR && <LabourProfile />}
               {currentRole === UserRole.MATERIAL_SUPPLIER && <SupplierProfile />}
               {currentRole === UserRole.JOB && <JobProfile />}
+              {currentRole === UserRole.FREELANCER && <FreelancerProfile />}
+              {currentRole === UserRole.BROKER && <BrokerProfile />}
             </div>
           )}
 
@@ -1506,9 +2039,14 @@ const App: React.FC = () => {
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
                     Welcome back, {
-                      currentRole === UserRole.CLIENT ? 'Client' : 
-                      currentRole === UserRole.VENDOR ? 'Partner Partner' : 
-                      currentRole === UserRole.LABOUR ? 'Skilled Worker' : 'Job Seeker'
+                      currentRole === UserRole.CLIENT ? 'Client / Developer' : 
+                      currentRole === UserRole.VENDOR ? 'Vendor / Partner' : 
+                      currentRole === UserRole.PMC ? 'PMC / Site Quality Consultant' :
+                      currentRole === UserRole.LABOUR ? 'Skilled Worker' : 
+                      currentRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' :
+                      currentRole === UserRole.JOB ? 'Job Seeker / Engineer' :
+                      currentRole === UserRole.FREELANCER ? 'Freelance Consultant' : 
+                      currentRole === UserRole.BROKER ? 'Real Estate Broker' : 'User'
                     }
                   </h1>
                   <p className="text-gray-500 text-sm mt-1">Here is what's happening with your projects today.</p>
@@ -1530,7 +2068,8 @@ const App: React.FC = () => {
                   {(currentRole === UserRole.VENDOR || 
                     currentRole === UserRole.LABOUR || 
                     currentRole === UserRole.MATERIAL_SUPPLIER || 
-                    currentRole === UserRole.JOB) && (
+                    currentRole === UserRole.JOB ||
+                    currentRole === UserRole.FREELANCER) && (
                     <div className="relative">
                       <button 
                         onClick={() => {
@@ -1666,7 +2205,8 @@ const App: React.FC = () => {
                     currentRole === UserRole.VENDOR || 
                     currentRole === UserRole.LABOUR || 
                     currentRole === UserRole.MATERIAL_SUPPLIER || 
-                    currentRole === UserRole.JOB) && (
+                    currentRole === UserRole.JOB ||
+                    currentRole === UserRole.FREELANCER) && (
                     <button 
                       onClick={() => setShowNewProjectModal(true)}
                       className="flex items-center justify-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-lg hover:bg-orange-700 transition-colors font-medium shadow-sm shadow-orange-200"
@@ -1678,7 +2218,12 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Construction Mart Pro Services (Interior, Civil, Instant Labours) */}
+              {/* Instant Labours Separate Section for Developer and Vendor */}
+              {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR) && (
+                <InstantLaboursSection currentRole={currentRole} />
+              )}
+
+              {/* Construction Mart Pro Services (Interior, Civil, etc.) */}
               {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR) && (
                 <ConstructionServicesPortal currentRole={currentRole} />
               )}
@@ -1843,6 +2388,18 @@ const App: React.FC = () => {
                 <SupplierDashboard />
               )}
 
+              {currentRole === UserRole.FREELANCER && (
+                <FreelancerProfile />
+              )}
+
+              {currentRole === UserRole.PMC && (
+                <PMCProfile />
+              )}
+
+              {currentRole === UserRole.BROKER && (
+                <BrokerProfile />
+              )}
+
               {/* Services Grid (Visible to Client mostly, or for info) - WITHOUT SERVICES LOGOS */}
               {false && currentRole === UserRole.CLIENT && (
                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -1857,7 +2414,7 @@ const App: React.FC = () => {
               )}
 
               {/* Analytics Dashboard */}
-              {(currentRole !== UserRole.LABOUR && currentRole !== UserRole.JOB && currentRole !== UserRole.MATERIAL_SUPPLIER) && (
+              {(currentRole !== UserRole.LABOUR && currentRole !== UserRole.JOB && currentRole !== UserRole.MATERIAL_SUPPLIER && currentRole !== UserRole.FREELANCER && currentRole !== UserRole.PMC && currentRole !== UserRole.BROKER) && (
                 <>
                   <Dashboard role={currentRole} projects={filteredProjects} />
 
@@ -1985,7 +2542,7 @@ const App: React.FC = () => {
               )}
 
               {/* GLOBAL OUR SERVICES IN HORIZONTAL ORIENTATION FOR ALL LOGIN PAGES */}
-              {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR || currentRole === UserRole.LABOUR || currentRole === UserRole.JOB) && (
+              {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR || currentRole === UserRole.LABOUR || currentRole === UserRole.JOB || currentRole === UserRole.FREELANCER) && (
                 <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm transition-all duration-300">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-gray-100">
                     <h3 className="font-bold text-gray-800 text-base flex items-center gap-2">
@@ -2415,18 +2972,16 @@ const App: React.FC = () => {
       {showAboutModal && (
         <div id="about-us-modal" className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-150">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Info className="text-orange-600" size={22} /> About Construction Mart
-              </h3>
-              <button onClick={() => setShowAboutModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-150">
+              <Logo size="sm" />
+              <button onClick={() => setShowAboutModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><X size={20}/></button>
             </div>
             <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
               <p>
-                <strong>Construction Mart</strong> is India's leading digital marketplace connecting premium clients, certified vendors, and skilled labor for seamless construction and interior renovation works.
+                <strong>Construction Mart SHK</strong> is India's leading digital marketplace connecting premium clients, certified vendors, and skilled labor for seamless construction and interior renovation works.
               </p>
               <p>
-                Founded by <strong className="text-gray-900 font-extrabold">SADDAM HUSAIN KHAN</strong>, Construction Mart simplifies site execution, material procurement, and labor deployment at a guaranteed flat rate of just 10% of the project budget.
+                Founded by <strong className="text-gray-900 font-extrabold">SADDAM HUSAIN KHAN</strong>, Construction Mart SHK simplifies site execution, material procurement, and labor deployment at a guaranteed flat rate of just 10% of the project budget.
               </p>
               <p>
                 Our platform ensures transparent, quality-monitored projects, secure escrow-based payouts, and direct contact directories, helping hundreds of homeowners and contracting partners build with trust, speed, and safety.

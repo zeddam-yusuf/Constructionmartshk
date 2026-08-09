@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import vendorSymbolImg from '../src/assets/images/vendor_symbol_1785094447958.jpg';
 import { 
   Building2, 
   MapPin, 
@@ -151,8 +152,8 @@ export function VendorProfile() {
             </div>
 
             <div className="mt-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400">
-                <Building2 size={24} />
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-orange-500/50 shadow-md shrink-0">
+                <img src={vendorSymbolImg} alt="Vendor Symbol" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h4 className="text-lg font-bold flex items-center gap-1.5">

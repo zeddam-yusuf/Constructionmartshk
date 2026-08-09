@@ -715,7 +715,7 @@ export const BrokersPoint: React.FC = () => {
           <div className="text-[10px] text-slate-500 font-medium leading-normal bg-orange-50/50 p-2.5 rounded-lg border border-dashed border-orange-200 flex items-start gap-2">
             <Coins size={14} className="text-orange-600 shrink-0 mt-0.5" />
             <span>
-              Real estate investments on Construction Mart are backed by title security reviews, ready structural audits and trusted brokerage escrows. Actual rental cashflow may vary according to direct tenant occupancy covenants.
+              Real estate investments on Construction Mart SHK are backed by title security reviews, ready structural audits and trusted brokerage escrows. Actual rental cashflow may vary according to direct tenant occupancy covenants.
             </span>
           </div>
         </div>

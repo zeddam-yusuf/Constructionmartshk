@@ -41,7 +41,7 @@ const DEFAULT_ITEMS: CarouselItem[] = [
     category: "Labor & Placement Services",
     image: "/src/assets/images/hassle_free_labour_1782069648076.jpg",
     rating: 5,
-    description: "Reliable and fully vetted contract laborers for major projects, completely managed and supported by Construction Mart."
+    description: "Reliable and fully vetted contract laborers for major projects, completely managed and supported by Construction Mart SHK."
   },
   {
     id: 5,

@@ -1,10 +1,13 @@
 export enum UserRole {
   CLIENT = 'CLIENT',
   VENDOR = 'VENDOR',
+  PMC = 'PMC',
   CHANNEL_PARTNER = 'CHANNEL_PARTNER',
   LABOUR = 'LABOUR',
-  JOB = 'JOB',
   MATERIAL_SUPPLIER = 'MATERIAL_SUPPLIER',
+  JOB = 'JOB',
+  FREELANCER = 'FREELANCER',
+  BROKER = 'BROKER',
 }
 
 export enum ServiceType {

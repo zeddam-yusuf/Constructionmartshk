@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Quotation, QuotationItem, ActivityRate, MaterialRate, Vendor, Project } from '../types';
 import { Plus, Trash2, Printer, Send, Calculator, MapPin, FileText } from 'lucide-react';
+import Logo from './Logo';
 
 interface QuotationGeneratorProps {
   vendor: Vendor;
@@ -157,6 +158,9 @@ const QuotationGenerator: React.FC<QuotationGeneratorProps> = ({
                 {/* Branding */}
                 <div className="flex justify-between items-start mb-8 pb-8 border-b border-slate-200">
                    <div>
+                     <div className="mb-3">
+                       <Logo size="xs" />
+                     </div>
                      <h2 className="text-2xl font-black text-gray-900 mb-1">{vendor.name}</h2>
                      <p className="text-sm text-gray-500">{vendor.specialty} Specialist</p>
                      <p className="text-xs text-gray-400 mt-1">{vendor.phone} • {vendor.email}</p>
@@ -164,7 +168,7 @@ const QuotationGenerator: React.FC<QuotationGeneratorProps> = ({
                    <div className="text-right">
                      <h1 className="text-3xl font-bold text-orange-600 uppercase tracking-tighter">QUOTATION</h1>
                      <p className="text-xs text-gray-500 mt-1">DATE: {new Date().toLocaleDateString()}</p>
-                     <p className="text-xs text-gray-400">REF: CM-{Math.floor(Math.random()*10000)}</p>
+                     <p className="text-xs text-gray-400">REF: CM-SHK-{Math.floor(Math.random()*10000)}</p>
                    </div>
                 </div>
 
@@ -239,7 +243,7 @@ const QuotationGenerator: React.FC<QuotationGeneratorProps> = ({
                    <p className="font-bold uppercase text-gray-500">Terms & Conditions:</p>
                    <p>1. Validity of this quotation is 15 days from the date of issue.</p>
                    <p>2. Payment strictly as per milestones defined in the contract.</p>
-                   <p>3. Construction Mart handles 10% service fee from the final vendor payout.</p>
+                   <p>3. Construction Mart SHK handles 10% service fee from the final vendor payout.</p>
                 </div>
              </div>
           </div>

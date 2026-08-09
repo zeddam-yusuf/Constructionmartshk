@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import developerSymbolImg from '../src/assets/images/developer_symbol_1785094433237.jpg';
 import { 
   User, 
   MapPin, 
@@ -129,8 +130,8 @@ export function ClientProfile() {
             </div>
 
             <div className="mt-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 font-bold text-xl uppercase">
-                {name[0]}
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-orange-500/50 shadow-md shrink-0">
+                <img src={developerSymbolImg} alt="Developer Symbol" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h4 className="text-lg font-bold">{name}</h4>
