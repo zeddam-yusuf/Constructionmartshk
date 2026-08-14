@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import freelancerSymbolImg from '../src/assets/images/freelancer_symbol_1785171686295.jpg';
 import { 
   User, 
@@ -27,18 +28,19 @@ import {
 } from 'lucide-react';
 
 export function FreelancerProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Er. Anand V. Kulkarni');
-  const [specialty, setSpecialty] = useState('Consulting Civil Engineer & Architectural Designer');
-  const [experience, setExperience] = useState('9+ Years');
-  const [location, setLocation] = useState('Pune & PCMC Region, Maharashtra');
-  const [phone, setPhone] = useState('+91 98221 44320');
-  const [email, setEmail] = useState('anand.kulkarni.cad@gmail.com');
-  const [consultingRate, setConsultingRate] = useState('₹1,500 / Project Hour or ₹3.50 / Sq.Ft');
-  const [education, setEducation] = useState('B.E. Civil Engineering (COEP) | Certified AutoDesk Revit Professional');
-  const [skills, setSkills] = useState('AutoCAD 2D/3D, 3D Elevation Modeling, Bar Bending Schedules (BBS), Contractor RA Billing, BOQ Estimation, Structural Audit');
-  const [bio, setBio] = useState('Licensed Independent Civil & Architectural Freelancer providing end-to-end technical drawings, steel rebar schedules, billing audits, and architectural plan approvals for residential bungalows, commercial buildings, and renovation projects. Over 140+ completed projects with 100% precision compliance.');
-  const [availability, setAvailability] = useState('Available for Remote & On-Site Consultation');
+  const [name, setName] = useState(user?.name || '');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState(user?.experience || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [consultingRate, setConsultingRate] = useState(user?.charges || '');
+  const [education, setEducation] = useState('');
+  const [skills, setSkills] = useState('');
+  const [bio, setBio] = useState('');
+  const [availability, setAvailability] = useState('');
 
   // Service Request Form State
   const [clientNameInput, setClientNameInput] = useState('');
@@ -86,6 +88,7 @@ export function FreelancerProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name, phone, email, city: location, experience, charges: consultingRate, category: user?.category || 'Freelance Consultant' });
     await saveSubmission('freelancer_profile_update', {
       name,
       specialty,
@@ -154,6 +157,14 @@ export function FreelancerProfile() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
+      <ProfilePrompt
+        name={name}
+        phone={phone}
+        city={location}
+        company={user?.companyName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       {/* Top Banner & Profile Header */}
       <div className="bg-gradient-to-r from-slate-900 via-zinc-900 to-amber-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />

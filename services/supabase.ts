@@ -1,11 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Read from environment variables only
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || '';
 
-// Create a single supabase client for the app
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Create a single supabase client for the app.
+// Guarded so the app still runs if the URL/key are missing or WebSocket is unavailable.
+let supabase: any = null;
+try {
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch (e) {
+  supabase = null;
+}
+
+export { supabase };
 
 export interface SupabaseBooking {
   id: string;
@@ -124,7 +134,7 @@ export const saveSubmission = async (type: string, data: any) => {
           .upsert({
             id,
             status: payload.status,
-            ...data,
+            data: data,
             created_at: payload.created_at
           }, { onConflict: 'id' });
         

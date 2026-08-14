@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import pmcSymbolImg from '../src/assets/images/pmc_symbol_1785866168151.jpg';
 import { 
   User, 
@@ -48,21 +49,22 @@ const INITIAL_SNAGS: AuditSnag[] = [
 ];
 
 export function PMCProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [companyName, setCompanyName] = useState('Apex Infra Project Management Consultants (PMC)');
-  const [leadConsultant, setLeadConsultant] = useState('Er. Rajeshwar M. Sharma');
-  const [specialty, setSpecialty] = useState('Senior Civil PMC & Quality Audit Lead');
-  const [experience, setExperience] = useState('16+ Years');
-  const [location, setLocation] = useState('Mumbai, Navi Mumbai & MMR Region');
-  const [phone, setPhone] = useState('+91 98205 11980');
-  const [email, setEmail] = useState('contact@apexinfrapmc.com');
-  const [reraNo, setReraNo] = useState('MAHARERA / PMC / 2021 / 00942');
-  const [consultingRate, setConsultingRate] = useState('₹1.25 - ₹2.50 / Sq.Ft of Built-up Area or Monthly Retainer');
-  const [education, setEducation] = useState('M.Tech (Construction Management) - IIT Bombay | PMP® Certified | Lead Auditor ISO 9001:2015');
-  const [skills, setSkills] = useState('Site Quality Assurance (QA/QC), Contractor RA Bill Verification, BOQ & Cost Control, Primavera P6 / MS Project Scheduling, Structural Safety Audits, Snag List Clearance');
-  const [bio, setBio] = useState('Apex Infra PMC delivers comprehensive project management consultancy services for real estate developers, society redevelopments, high-rise residential towers, and commercial infrastructure. Our specialized engineers supervise daily site execution, verify contractor measurement sheets (MB), conduct stringent cube compressive tests, and ensure projects finish on schedule with zero tolerance for structural defects.');
-  const [activeProjectsCount, setActiveProjectsCount] = useState(8);
-  const [totalSupervisedArea, setTotalSupervisedArea] = useState('4.2 Million Sq.Ft');
+  const [companyName, setCompanyName] = useState(user?.companyName || '');
+  const [leadConsultant, setLeadConsultant] = useState(user?.name || '');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState(user?.experience || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [reraNo, setReraNo] = useState(user?.gstNumber || '');
+  const [consultingRate, setConsultingRate] = useState('');
+  const [education, setEducation] = useState('');
+  const [skills, setSkills] = useState('');
+  const [bio, setBio] = useState('');
+  const [activeProjectsCount, setActiveProjectsCount] = useState(0);
+  const [totalSupervisedArea, setTotalSupervisedArea] = useState('');
 
   // Snag list state
   const [snags, setSnags] = useState<AuditSnag[]>(INITIAL_SNAGS);
@@ -119,6 +121,7 @@ export function PMCProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name: leadConsultant, phone, email, city: location, companyName, experience, gstNumber: reraNo });
     await saveSubmission('pmc_profile_update', {
       companyName,
       leadConsultant,
@@ -174,7 +177,14 @@ export function PMCProfile() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      
+      <ProfilePrompt
+        name={leadConsultant}
+        phone={phone}
+        city={location}
+        company={companyName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       {/* Profile Header Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-150 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-orange-100/50 via-amber-50/20 to-transparent rounded-bl-full pointer-events-none" />

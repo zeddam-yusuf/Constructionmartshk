@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import developerSymbolImg from '../src/assets/images/developer_symbol_1785094433237.jpg';
 import { 
   User, 
@@ -18,15 +19,16 @@ import {
 } from 'lucide-react';
 
 export function ClientProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Ankit Sharma');
-  const [company, setCompany] = useState('Sharma Builders & Developers');
-  const [location, setLocation] = useState('Mumbai Suburbs, MH');
-  const [phone, setPhone] = useState('+91 91234 56789');
-  const [email, setEmail] = useState('ankit.sharma@sharmabuilders.in');
-  const [budgetRange, setBudgetRange] = useState('₹50 Lakhs - ₹2 Crores');
-  const [projectTypes, setProjectTypes] = useState('Residential, Renovations, Structural Castings');
-  const [bio, setBio] = useState('A leading real-estate contractor based in Mumbai with 12+ active medium-scale multi-family housing projects. Seeking reliable, skilled Masonry, Civil and Electrical vendors for immediate collaboration.');
+  const [name, setName] = useState(user?.name || '');
+  const [company, setCompany] = useState(user?.companyName || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [budgetRange, setBudgetRange] = useState('Not set');
+  const [projectTypes, setProjectTypes] = useState('Not set');
+  const [bio, setBio] = useState('');
 
   const [tempData, setTempData] = useState<any>(null);
 
@@ -60,6 +62,7 @@ export function ClientProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name, phone, email, city: location, companyName: company });
     const updatedProfile = {
       id: `client-profile-ankit`,
       fullName: name,
@@ -81,6 +84,14 @@ export function ClientProfile() {
 
   return (
     <div id="client-profile-container" className="space-y-6">
+      <ProfilePrompt
+        name={name}
+        phone={phone}
+        city={location}
+        company={company}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900 font-sans tracking-tight">Client Account Profile</h2>

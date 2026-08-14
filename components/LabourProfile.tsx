@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import labourSymbolImg from '../src/assets/images/labour_symbol_1785094461353.jpg';
 import { 
   User, 
@@ -23,31 +24,22 @@ import {
 } from 'lucide-react';
 
 export function LabourProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Ramu Yadav');
-  const [category, setCategory] = useState('Masonry & Civil Works');
-  const [specialty, setSpecialty] = useState('Plastering & Bricklaying');
-  const [baseRate, setBaseRate] = useState(950);
-  const [overtimeRate, setOvertimeRate] = useState(150);
-  const [experience, setExperience] = useState('8+ Years');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [email, setEmail] = useState('ramu.yadav@consmart.in');
-  const [bio, setBio] = useState('Specialized in structural high-rise concrete slab casting and detailed wall plastering. Completed over 40 projects under tier-1 construction contractors in the Mumbai region with clean records.');
+  const [name, setName] = useState(user?.name || '');
+  const [category, setCategory] = useState(user?.category || '');
+  const [specialty, setSpecialty] = useState('');
+  const [baseRate, setBaseRate] = useState(0);
+  const [overtimeRate, setOvertimeRate] = useState(0);
+  const [experience, setExperience] = useState(user?.experience || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [bio, setBio] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
   const [newSkill, setNewSkill] = useState('');
-  const [skills, setSkills] = useState([
-    'Cement Plastering', 
-    'Slab Casting', 
-    'Brickwork Layout', 
-    'Column Vibrator Ops', 
-    'Blueprints Literacy', 
-    'Safety First Compliance'
-  ]);
+  const [skills, setSkills] = useState<string[]>([]);
   const [newCert, setNewCert] = useState('');
-  const [certificates, setCertificates] = useState([
-    'National Skill Development Corp (NSDC) - Level 4 Mason', 
-    'ConSmart Certified Safety-First Hand'
-  ]);
+  const [certificates, setCertificates] = useState<string[]>([]);
 
   const [tempData, setTempData] = useState<any>(null);
 
@@ -89,6 +81,7 @@ export function LabourProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name, phone, email, category, experience, charges: baseRate ? `₹${baseRate}/day` : undefined });
     const updatedProfile = {
       id: `labour-profile-ramu`,
       fullName: name,
@@ -134,6 +127,14 @@ export function LabourProfile() {
 
   return (
     <div id="labour-profile-container" className="space-y-6">
+      <ProfilePrompt
+        name={name}
+        phone={phone}
+        city={user?.city || ''}
+        company={user?.companyName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Your Labour Profile</h2>

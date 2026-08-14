@@ -4,7 +4,6 @@ import Dashboard from './components/Dashboard';
 import AIAssistant from './components/AIAssistant';
 import PaymentModal from './components/PaymentModal';
 import ServiceCarousel, { CarouselItem } from './components/ServiceCarousel';
-import AdminPanel from './components/AdminPanel';
 import ChatWindow from './components/ChatWindow';
 import VendorProfileForm from './components/VendorProfileForm';
 import VendorRatesPanel from './components/VendorRatesPanel';
@@ -20,6 +19,9 @@ import { JobProfile } from './components/JobProfile';
 import { VendorProfile } from './components/VendorProfile';
 import SupplierDashboard from './components/SupplierDashboard';
 import { fetchAllBookings, saveBooking, saveSubmission } from './services/supabase';
+import { useAuth } from './services/auth';
+import { AuthScreen } from './components/AuthScreen';
+import { SuperAdminPanel } from './components/SuperAdminPanel';
 import developerSymbolImg from './src/assets/images/developer_symbol_1785094433237.jpg';
 import vendorSymbolImg from './src/assets/images/vendor_symbol_1785094447958.jpg';
 import labourSymbolImg from './src/assets/images/labour_symbol_1785094461353.jpg';
@@ -68,7 +70,10 @@ import {
   MapPin,
   Percent,
   Coins,
-  Bell
+  Bell,
+  LogOut,
+  LogIn,
+  Loader2
 } from 'lucide-react';
 
 // --- MOCK DATA ---
@@ -725,6 +730,11 @@ export const ROLE_SYMBOLS: Record<UserRole, { img: string; label: string; desc: 
     img: brokerSymbolImg,
     label: 'Brokers (Real Estate)',
     desc: 'RERA Real Estate Agents / Outright Properties / Commercial Mandates'
+  },
+  [UserRole.CHANNEL_PARTNER]: {
+    img: brokerSymbolImg,
+    label: 'Channel Partner',
+    desc: 'Refer projects & clients, earn referral commissions'
   }
 };
 
@@ -732,12 +742,14 @@ const RoleSelection = ({
   onSelect, 
   activityRates, 
   materialRates,
-  onOpenRateExplorer
+  onOpenRateExplorer,
+  onRegister
 }: { 
   onSelect: (role: UserRole) => void;
   activityRates: ActivityRate[];
   materialRates: MaterialRate[];
   onOpenRateExplorer: () => void;
+  onRegister?: (role: UserRole) => void;
 }) => {
   const [showRegister, setShowRegister] = useState(false);
   const [regRole, setRegRole] = useState<UserRole | null>(null);
@@ -756,6 +768,11 @@ const RoleSelection = ({
   const [gstNumber, setGstNumber] = useState('');
 
   const handleRegister = (role: UserRole) => {
+    // When a register handler is provided (new auth flow), open the AuthScreen register tab.
+    if (onRegister) {
+      onRegister(role);
+      return;
+    }
     setRegRole(role);
     setShowRegister(true);
     // Initialize default category depending on selected role
@@ -1486,10 +1503,17 @@ const RoleSelection = ({
 
 // 2. Main App Component
 const App: React.FC = () => {
+  const auth = useAuth();
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginInitialMode, setLoginInitialMode] = useState<'login' | 'register'>('login');
+  const openLogin = (mode: 'login' | 'register' = 'login') => {
+    setLoginInitialMode(mode);
+    setShowLogin(true);
+  };
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [vendors, setVendors] = useState<Vendor[]>(MOCK_VENDORS_DATA);
@@ -1596,6 +1620,16 @@ const App: React.FC = () => {
     const reqCat = req.reqCategory || (req.title.toLowerCase().includes('cement') || req.title.toLowerCase().includes('brick') || req.title.toLowerCase().includes('steel') || req.title.toLowerCase().includes('concrete') ? 'Materials' : (req.title.toLowerCase().includes('engineer') || req.title.toLowerCase().includes('safety') || req.title.toLowerCase().includes('surveyor') || req.title.toLowerCase().includes('staff') ? 'Staff' : 'Labours'));
     return reqType === selectedRequesterType && reqCat === selectedReqCategory;
   });
+
+  // Derive the active dashboard role from the logged-in user
+  useEffect(() => {
+    if (!auth.ready) return;
+    if (auth.user && auth.user.role !== 'SUPERADMIN') {
+      setCurrentRole(auth.user.role as UserRole);
+    } else if (!auth.user) {
+      setCurrentRole(null);
+    }
+  }, [auth.user, auth.ready]);
 
   // Navigation Logic
   const goBack = () => {
@@ -1736,16 +1770,87 @@ const App: React.FC = () => {
     }, 2000);
   };
 
+  // Auth gate: loading, then super admin console or the marketplace home.
+  // Guests land on the RoleSelection home page first (sliders + role cards), not the login form.
+  if (!auth.ready || (auth.user && auth.user.role !== 'SUPERADMIN' && !currentRole)) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="animate-spin text-orange-600" size={32} />
+          <span className="text-sm font-semibold text-gray-400">Loading Construction Mart SHK...</span>
+        </div>
+      </div>
+    );
+  }
+  if (auth.user?.role === 'SUPERADMIN') {
+    return <SuperAdminPanel onLogout={auth.logout} />;
+  }
+
+  // Reusable overlays (rate explorer drawer + login modal) shown for guests and logged-in users alike.
+  const rateExplorerDrawer = isRateExplorerOpen && (
+    <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+          onClick={() => setIsRateExplorerOpen(false)}
+        />
+        <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+          <div className="pointer-events-auto w-screen max-w-3xl transform transition-transform duration-300 ease-in-out">
+            <div className="flex h-full flex-col bg-white shadow-2xl overflow-hidden rounded-l-3xl border-l border-gray-100 animate-in slide-in-from-right duration-300">
+              <div className="px-6 py-5 bg-gradient-to-r from-orange-600 to-orange-500 text-white flex items-center justify-between sticky top-0 z-10 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <TrendingUp size={24} className="text-white animate-pulse" />
+                  <div>
+                    <h2 className="text-lg font-black tracking-tight" id="slide-over-title">Construction Market Rate Explorer</h2>
+                    <p className="text-[10px] text-orange-100 font-bold uppercase tracking-wider">Live Regional Pricing Directory</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsRateExplorerOpen(false)}
+                  className="p-2 bg-white/10 hover:bg-white/20 active:scale-95 rounded-xl text-white transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
+                  <RateExplorer activityRates={activityRates} materialRates={materialRates} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const loginModal = showLogin && !auth.user && (
+    <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto">
+      <div className="min-h-full flex items-center justify-center p-4 sm:p-6 py-10">
+        <AuthScreen onClose={() => setShowLogin(false)} initialMode={loginInitialMode} />
+      </div>
+    </div>
+  );
+
+  // Guests: show the home landing page with sliders and role selection.
+  if (!auth.user) {
+    return (
+      <>
+        <RoleSelection
+          onSelect={() => openLogin('login')}
+          activityRates={activityRates}
+          materialRates={materialRates}
+          onOpenRateExplorer={() => setIsRateExplorerOpen(true)}
+          onRegister={() => openLogin('register')}
+        />
+        {rateExplorerDrawer}
+        {loginModal}
+      </>
+    );
+  }
+
   return (
     <>
-      {!currentRole ? (
-        <RoleSelection 
-          onSelect={setCurrentRole} 
-          activityRates={activityRates} 
-          materialRates={materialRates} 
-          onOpenRateExplorer={() => setIsRateExplorerOpen(true)}
-        />
-      ) : (
         <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="bg-white sticky top-0 z-30 shadow-sm border-b border-gray-100">
@@ -1764,7 +1869,7 @@ const App: React.FC = () => {
                <button onClick={goForward} className="p-1 hover:text-gray-700 hover:bg-gray-100 rounded"><ChevronRight size={20}/></button>
             </div>
 
-            <div className="flex items-center gap-2 ml-2 min-w-max cursor-pointer" onClick={() => setCurrentRole(null)}>
+            <div className="flex items-center gap-2 ml-2 min-w-max cursor-pointer" onClick={() => (auth.user ? auth.logout() : openLogin('login'))} title={auth.user ? "Logout" : "Login / Sign Up"}>
               <Logo size="sm" />
             </div>
           </div>
@@ -1794,7 +1899,9 @@ const App: React.FC = () => {
                   />
                 )}
                 <span className="text-xs font-black text-orange-700 uppercase tracking-wide">
-                  {currentRole === UserRole.CLIENT ? 'Developer' : currentRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : currentRole === UserRole.FREELANCER ? 'Freelancer' : currentRole}
+                  {currentRole !== null && currentRole !== undefined
+                    ? (currentRole === UserRole.CLIENT ? 'Developer' : currentRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : currentRole === UserRole.FREELANCER ? 'Freelancer' : currentRole.toString())
+                    : 'Guest'}
                 </span>
              </div>
 
@@ -1845,8 +1952,29 @@ const App: React.FC = () => {
             </div>
             
             <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border-2 border-white shadow-sm">
-               <img src={`https://picsum.photos/seed/${currentRole}/100/100`} alt="Avatar" className="w-full h-full object-cover" />
+               <img src={`https://picsum.photos/seed/${currentRole || 'guest'}/100/100`} alt="Avatar" className="w-full h-full object-cover" />
             </div>
+
+            {/* Login / Sign Up (guest) or Logout */}
+            {auth.user ? (
+              <button
+                onClick={auth.logout}
+                className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-full transition-colors border border-gray-200"
+                title="Logout"
+              >
+                <LogOut size={17} />
+                <span className="text-xs font-bold hidden sm:inline">Logout</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => openLogin('login')}
+                className="flex items-center gap-1.5 text-orange-700 hover:text-white hover:bg-orange-600 bg-orange-50 px-3 py-1.5 rounded-full transition-colors border border-orange-200"
+                title="Login / Sign Up"
+              >
+                <LogIn size={17} />
+                <span className="text-xs font-bold hidden sm:inline">Login / Sign Up</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1935,14 +2063,6 @@ const App: React.FC = () => {
               </button>
               
               <button 
-                onClick={() => setActiveTab('admin')}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'admin' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                <Settings size={20} />
-                Admin Panel
-              </button>
-
-              <button 
                 onClick={() => setShowSupportModal(true)} 
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50"
               >
@@ -1979,16 +2099,6 @@ const App: React.FC = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {activeTab === 'admin' && (
-             <AdminPanel 
-               projects={projects} 
-               vendors={vendors} 
-               clients={MOCK_CLIENTS}
-               channelPartners={MOCK_CHANNEL_PARTNERS}
-               onAssignVendor={handleAssignVendor} 
-             />
-          )}
-          
           {activeTab === 'messages' && (
              <ChatWindow 
                currentUserRole={currentRole} 
@@ -2032,24 +2142,30 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in duration-300">
               {/* Carousel Showcase */}
-              <ServiceCarousel items={currentRole === UserRole.JOB ? JOB_VACANCIES_SLIDES : undefined} />
+              <ServiceCarousel items={currentRole === UserRole.JOB ? JOB_VACANCIES_SLIDES : !currentRole ? LANDING_ADS : undefined} />
 
               {/* Welcome Section */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
-                    Welcome back, {
-                      currentRole === UserRole.CLIENT ? 'Client / Developer' : 
-                      currentRole === UserRole.VENDOR ? 'Vendor / Partner' : 
-                      currentRole === UserRole.PMC ? 'PMC / Site Quality Consultant' :
-                      currentRole === UserRole.LABOUR ? 'Skilled Worker' : 
-                      currentRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' :
-                      currentRole === UserRole.JOB ? 'Job Seeker / Engineer' :
-                      currentRole === UserRole.FREELANCER ? 'Freelance Consultant' : 
-                      currentRole === UserRole.BROKER ? 'Real Estate Broker' : 'User'
-                    }
+                    {currentRole ? (
+                      <>Welcome back, {
+                        currentRole === UserRole.CLIENT ? 'Client / Developer' : 
+                        currentRole === UserRole.VENDOR ? 'Vendor / Partner' : 
+                        currentRole === UserRole.PMC ? 'PMC / Site Quality Consultant' :
+                        currentRole === UserRole.LABOUR ? 'Skilled Worker' : 
+                        currentRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' :
+                        currentRole === UserRole.JOB ? 'Job Seeker / Engineer' :
+                        currentRole === UserRole.FREELANCER ? 'Freelance Consultant' : 
+                        currentRole === UserRole.BROKER ? 'Real Estate Broker' : 'User'
+                      }</>
+                    ) : (
+                      <>Welcome to Construction Mart SHK</>
+                    )}
                   </h1>
-                  <p className="text-gray-500 text-sm mt-1">Here is what's happening with your projects today.</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {currentRole ? "Here is what's happening with your projects today." : "India's leading construction & interior marketplace. Browse projects, hire labour, compare market rates and more — sign in to unlock your dashboard."}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   {/* Style block for animations */}
@@ -3074,51 +3190,10 @@ const App: React.FC = () => {
         </div>
       )}
         </div>
-      )}
 
-      {/* Sliding Panel Drawer for Market Rate Explorer */}
-      {isRateExplorerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 overflow-hidden">
-            {/* Background overlay */}
-            <div 
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" 
-              onClick={() => setIsRateExplorerOpen(false)}
-            />
-
-            {/* Sliding Panel Container */}
-            <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-              <div className="pointer-events-auto w-screen max-w-3xl transform transition-transform duration-300 ease-in-out">
-                <div className="flex h-full flex-col bg-white shadow-2xl overflow-hidden rounded-l-3xl border-l border-gray-100 animate-in slide-in-from-right duration-300">
-                  {/* Drawer Header */}
-                  <div className="px-6 py-5 bg-gradient-to-r from-orange-600 to-orange-500 text-white flex items-center justify-between sticky top-0 z-10 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <TrendingUp size={24} className="text-white animate-pulse" />
-                      <div>
-                        <h2 className="text-lg font-black tracking-tight" id="slide-over-title">Construction Market Rate Explorer</h2>
-                        <p className="text-[10px] text-orange-100 font-bold uppercase tracking-wider">Live Regional Pricing Directory</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setIsRateExplorerOpen(false)}
-                      className="p-2 bg-white/10 hover:bg-white/20 active:scale-95 rounded-xl text-white transition-all"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  {/* Drawer Content */}
-                  <div className="flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar">
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-                      <RateExplorer activityRates={activityRates} materialRates={materialRates} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Rate Explorer drawer + login modal (shared with the guest home view) */}
+      {rateExplorerDrawer}
+      {loginModal}
     </>
   );
 };

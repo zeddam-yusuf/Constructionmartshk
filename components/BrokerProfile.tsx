@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import brokerSymbolImg from '../src/assets/images/broker_symbol_1785866178809.jpg';
 import { BrokersPoint } from './BrokersPoint';
 import { 
@@ -29,19 +30,20 @@ import {
 } from 'lucide-react';
 
 export function BrokerProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [agencyName, setAgencyName] = useState('Prime Crest Real Estate & Land Advisory');
-  const [brokerName, setBrokerName] = useState('Vikram S. Singhania');
-  const [specialty, setSpecialty] = useState('Senior RERA Real Estate Consultant & Commercial Mandates');
-  const [experience, setExperience] = useState('14+ Years');
-  const [location, setLocation] = useState('Mumbai, Thane, Pune & MMR Corridor');
-  const [phone, setPhone] = useState('+91 98200 88710');
-  const [email, setEmail] = useState('vikram@primecrestrealty.com');
-  const [reraNo, setReraNo] = useState('MAHARERA / AGENT / A51800029311');
-  const [totalDealsValue, setTotalDealsValue] = useState('₹185+ Crores');
-  const [activeListingsCount, setActiveListingsCount] = useState(42);
-  const [commissionRate, setCommissionRate] = useState('1% (Residential Outright) / 2% (Commercial Pre-Leased) / 1 Month Rent (Leasing)');
-  const [bio, setBio] = useState('Prime Crest Real Estate is a registered premium real estate advisory providing end-to-end transaction management for residential luxury apartments, pre-leased Grade-A commercial office floors, land parcels for redevelopment, and industrial logistics parks. Direct tie-ups with 35+ top-tier developers and corporate funds.');
+  const [agencyName, setAgencyName] = useState(user?.companyName || '');
+  const [brokerName, setBrokerName] = useState(user?.name || '');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState(user?.experience || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [reraNo, setReraNo] = useState(user?.gstNumber || '');
+  const [totalDealsValue, setTotalDealsValue] = useState('');
+  const [activeListingsCount, setActiveListingsCount] = useState(0);
+  const [commissionRate, setCommissionRate] = useState('');
+  const [bio, setBio] = useState('');
 
   // Commission Calculator State
   const [dealValue, setDealValue] = useState<number>(150); // in Lakhs
@@ -83,6 +85,7 @@ export function BrokerProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name: brokerName, phone, email, city: location, companyName: agencyName, experience, gstNumber: reraNo });
     await saveSubmission('broker_profile_update', {
       agencyName,
       brokerName,
@@ -103,7 +106,14 @@ export function BrokerProfile() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      
+      <ProfilePrompt
+        name={brokerName}
+        phone={phone}
+        city={location}
+        company={agencyName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       {/* Profile Header Banner */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-150 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-amber-100/50 via-orange-50/20 to-transparent rounded-bl-full pointer-events-none" />

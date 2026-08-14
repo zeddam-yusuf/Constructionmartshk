@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import vendorSymbolImg from '../src/assets/images/vendor_symbol_1785094447958.jpg';
 import { 
   Building2, 
@@ -19,16 +20,17 @@ import {
 } from 'lucide-react';
 
 export function VendorProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Vikram Malhotra');
-  const [companyName, setCompanyName] = useState('Malhotra Contracting & Civil Works');
-  const [location, setLocation] = useState('Andheri East, Mumbai');
-  const [phone, setPhone] = useState('+91 98200 11223');
-  const [email, setEmail] = useState('contact@malhotraconstruction.com');
-  const [experience, setExperience] = useState('12 Years');
+  const [name, setName] = useState(user?.name || '');
+  const [companyName, setCompanyName] = useState(user?.companyName || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [experience, setExperience] = useState(user?.experience || '');
   const [laborStrength, setLaborStrength] = useState(45);
   const [contractTypes, setContractTypes] = useState(['Lump Sum', 'Item Rate', 'Labor Only', 'Material + Labor']);
-  const [bio, setBio] = useState('Established Grade-A civil contractors specializing in structural excavation, RCC foundations, masonry work, and high-precision structural concrete pouring. Equipped to handle projects up to ₹5 Crores valuation with our dedicated team of carpenters, bar-benders, and masons.');
+  const [bio, setBio] = useState('');
 
   const [tempData, setTempData] = useState<any>(null);
 
@@ -81,6 +83,7 @@ export function VendorProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name, phone, email, city: location, companyName, experience });
     const updatedProfile = {
       id: `vendor-profile-vikram`,
       fullName: name,
@@ -103,6 +106,14 @@ export function VendorProfile() {
 
   return (
     <div id="vendor-profile-container" className="space-y-6">
+      <ProfilePrompt
+        name={name}
+        phone={phone}
+        city={location}
+        company={companyName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Vendor Business Profile</h2>

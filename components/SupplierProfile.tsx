@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import supplierSymbolImg from '../src/assets/images/supplier_symbol_1785094473667.jpg';
 import { 
   Building2, 
@@ -22,15 +23,16 @@ import {
 } from 'lucide-react';
 
 export function SupplierProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Rajesh Gupta');
-  const [businessName, setBusinessName] = useState('Gupta Materials & Co.');
-  const [location, setLocation] = useState('Turbhe MIDC, Navi Mumbai');
-  const [phone, setPhone] = useState('+91 99887 76655');
-  const [email, setEmail] = useState('sales@guptamaterials.co.in');
-  const [deliveryRadius, setDeliveryRadius] = useState('50 km (Across Mumbai & Thane)');
-  const [minOrderValue, setMinOrderValue] = useState(15000);
-  const [bio, setBio] = useState('Primary distributor of UltraTech Cement, JSW Steel, and standard clay/concrete brick configurations. Operating an internal fleet of 6 Mahindra Bolero Pik-Ups and 2 Transit Mixers for prompt site deliveries.');
+  const [name, setName] = useState(user?.name || '');
+  const [businessName, setBusinessName] = useState(user?.companyName || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [deliveryRadius, setDeliveryRadius] = useState('');
+  const [minOrderValue, setMinOrderValue] = useState(0);
+  const [bio, setBio] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
 
   const [tempData, setTempData] = useState<any>(null);
@@ -67,6 +69,7 @@ export function SupplierProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name, phone, email, city: location, companyName: businessName, category: user?.category || 'Material Supplier' });
     const updatedProfile = {
       id: `supplier-profile-rajesh`,
       fullName: name,
@@ -89,6 +92,14 @@ export function SupplierProfile() {
 
   return (
     <div id="supplier-profile-container" className="space-y-6">
+      <ProfilePrompt
+        name={name}
+        phone={phone}
+        city={location}
+        company={businessName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Material Supplier Profile</h2>

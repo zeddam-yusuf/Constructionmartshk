@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSubmission } from '../services/supabase';
+import { useProfile, ProfilePrompt } from '../services/profile';
 import jobSymbolImg from '../src/assets/images/job_symbol_1785094488725.jpg';
 import { 
   User, 
@@ -21,18 +22,19 @@ import {
 } from 'lucide-react';
 
 export function JobProfile() {
+  const { user, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Rahul Deshmukh');
-  const [specialty, setSpecialty] = useState('Senior Site Supervisor (RCC)');
-  const [experience, setExperience] = useState('8 Years');
-  const [location, setLocation] = useState('Thane West, Mumbai');
-  const [phone, setPhone] = useState('+91 98334 22110');
-  const [email, setEmail] = useState('rahul.deshmukh88@gmail.com');
-  const [expectedSalary, setExpectedSalary] = useState('₹45,000 / Month');
-  const [education, setEducation] = useState('Diploma in Civil Engineering (VITI)');
-  const [skills, setSkills] = useState('RCC Castings, Bar Bending Schedules, AutoCAD, Labor Management, Safety Audits');
-  const [bio, setBio] = useState('Dynamic Site Supervisor with 8 years of rigorous on-site experience overseeing residential and commercial RCC framing, concrete pours, blockwork, and finish plastering. Solid track record in maintaining OSHA safety rules and finishing projects 15% ahead of deadlines.');
-  const [availability, setAvailability] = useState('Immediate Joint');
+  const [name, setName] = useState(user?.name || '');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState(user?.experience || '');
+  const [location, setLocation] = useState(user?.city || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [expectedSalary, setExpectedSalary] = useState(user?.charges || '');
+  const [education, setEducation] = useState('');
+  const [skills, setSkills] = useState('');
+  const [bio, setBio] = useState('');
+  const [availability, setAvailability] = useState('');
 
   const [tempData, setTempData] = useState<any>(null);
 
@@ -72,6 +74,7 @@ export function JobProfile() {
 
   const saveEdit = async () => {
     setIsEditing(false);
+    await saveProfile({ name, phone, email, city: location, experience, charges: expectedSalary, category: user?.category || 'Civil Engineer', gstNumber: user?.gstNumber });
     const updatedProfile = {
       id: `job-profile-rahul`,
       fullName: name,
@@ -96,6 +99,14 @@ export function JobProfile() {
 
   return (
     <div id="job-profile-container" className="space-y-6">
+      <ProfilePrompt
+        name={name}
+        phone={phone}
+        city={location}
+        company={user?.companyName}
+        email={email}
+        onEdit={() => { startEdit(); }}
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Professional Job Seeker Profile</h2>
