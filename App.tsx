@@ -1507,7 +1507,7 @@ const App: React.FC = () => {
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
   const [showLogin, setShowLogin] = useState(false);
   const [loginInitialMode, setLoginInitialMode] = useState<'login' | 'register'>('login');
   const openLogin = (mode: 'login' | 'register' = 'login') => {

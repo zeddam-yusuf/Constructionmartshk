@@ -169,7 +169,7 @@ export function VendorProfile() {
               <div>
                 <h4 className="text-lg font-bold flex items-center gap-1.5">
                   {companyName}
-                  <ShieldCheck size={18} className="text-orange-500 shrink-0" title="Verified Grade-A Contractor" />
+                  <ShieldCheck size={18} className="text-orange-500 shrink-0" aria-label="Verified Grade-A Contractor" />
                 </h4>
                 <p className="text-xs text-slate-400 font-medium">Lead: {name}</p>
               </div>
