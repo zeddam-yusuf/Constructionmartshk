@@ -65,6 +65,10 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   projectId?: string; // Optional: link message to a specific project context
+  recipientId?: string;
+  recipientName?: string;
+  recipientRole?: string;
+  conversationId?: string;
 }
 
 export interface Vendor {

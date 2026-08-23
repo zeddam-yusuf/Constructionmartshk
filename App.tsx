@@ -18,7 +18,8 @@ import { SupplierProfile } from './components/SupplierProfile';
 import { JobProfile } from './components/JobProfile';
 import { VendorProfile } from './components/VendorProfile';
 import SupplierDashboard from './components/SupplierDashboard';
-import { fetchAllBookings, saveBooking, saveSubmission } from './services/supabase';
+import { fetchAllBookings, saveBooking, saveSubmission, fetchAllSubmissions } from './services/supabase';
+import { listLocalWorkRequests, WorkRequest } from './components/RequestsBoard';
 import { useAuth } from './services/auth';
 import { AuthScreen } from './components/AuthScreen';
 import { SuperAdminPanel } from './components/SuperAdminPanel';
@@ -33,6 +34,9 @@ import brokerSymbolImg from './src/assets/images/broker_symbol_1785866178809.jpg
 import { FreelancerProfile } from './components/FreelancerProfile';
 import { PMCProfile } from './components/PMCProfile';
 import { BrokerProfile } from './components/BrokerProfile';
+import { RequestsView } from './components/RequestsBoard';
+import { PostRequestModal } from './components/PostRequestModal';
+import { MyPosting } from './components/MyPosting';
 import Logo from './components/Logo';
 import { 
   LayoutDashboard, 
@@ -73,6 +77,10 @@ import {
   Bell,
   LogOut,
   LogIn,
+  ClipboardList,
+  HardHat,
+  FileText,
+  Briefcase,
   Loader2
 } from 'lucide-react';
 
@@ -1507,7 +1515,7 @@ const App: React.FC = () => {
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'requests' | 'myPosting' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
   const [showLogin, setShowLogin] = useState(false);
   const [loginInitialMode, setLoginInitialMode] = useState<'login' | 'register'>('login');
   const openLogin = (mode: 'login' | 'register' = 'login') => {
@@ -1515,7 +1523,71 @@ const App: React.FC = () => {
     setShowLogin(true);
   };
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('const_mart_local_chat_messages');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length) return parsed as ChatMessage[];
+      }
+    } catch {}
+    return INITIAL_MESSAGES;
+  });
+
+  // Load chat history from database (Supabase submissions) and merge with local cache
+  useEffect(() => {
+    const loadRemoteChat = async () => {
+      try {
+        const submissions = await fetchAllSubmissions();
+        const remoteChats = submissions
+          .filter((s: any) => s.type === 'chat_message' && s.data)
+          .map((s: any) => s.data as ChatMessage);
+        if (remoteChats.length) {
+          setMessages((prev) => {
+            const byId = new Map<string, ChatMessage>();
+            [...prev, ...remoteChats].forEach((m) => byId.set(m.id, m));
+            const merged = Array.from(byId.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            try { localStorage.setItem('const_mart_local_chat_messages', JSON.stringify(merged)); } catch {}
+            return merged;
+          });
+        }
+      } catch {}
+    };
+    loadRemoteChat();
+  }, []);
+
+  // Unread chat count — only messages not sent by current user and newer than last time chat was opened
+  const [chatLastReadAt, setChatLastReadAt] = useState<string>(() => {
+    try { return localStorage.getItem('cm_chat_last_read') || ''; } catch { return ''; }
+  });
+  useEffect(() => {
+    if (activeTab === 'messages') {
+      const now = new Date().toISOString();
+      try { localStorage.setItem('cm_chat_last_read', now); } catch {}
+      setChatLastReadAt(now);
+    }
+  }, [activeTab]);
+  const unreadCount = React.useMemo(() => {
+    if (!messages.length) return 0;
+    const last = chatLastReadAt ? new Date(chatLastReadAt).getTime() : 0;
+    const currentUserId = (auth as any)?.user?.id;
+    return messages.filter((m) => {
+      const isMe =
+        m.senderId === currentUserId ||
+        m.senderId === 'user' ||
+        m.senderRole?.toUpperCase() === String(currentRole || '').toUpperCase() ||
+        (String(currentRole) === UserRole.CLIENT && m.senderRole === 'Client');
+      if (isMe) return false;
+      const isForMe =
+        m.recipientId === currentUserId ||
+        m.conversationId === currentUserId ||
+        (!m.recipientId && !m.conversationId && (m.senderRole === 'Admin' || m.senderRole === 'System'));
+      if (!isForMe) return false;
+      if (!chatLastReadAt) return true;
+      return new Date(m.timestamp).getTime() > last;
+    }).length;
+  }, [messages, chatLastReadAt, (auth as any)?.user?.id, currentRole]);
+
   const [vendors, setVendors] = useState<Vendor[]>(MOCK_VENDORS_DATA);
   const [activityRates, setActivityRates] = useState<ActivityRate[]>(INITIAL_ACTIVITY_RATES);
   const [materialRates, setMaterialRates] = useState<MaterialRate[]>(INITIAL_MATERIAL_RATES);
@@ -1584,11 +1656,56 @@ const App: React.FC = () => {
     });
     alert('⚡ Instant booking confirmed! WhatsApp notification alert sent back to material supplier.');
   };
+
+  // Dynamic Active Instant Labour Requests from database (Work Project posts)
+  const [labourRequests, setLabourRequests] = useState<WorkRequest[]>([]);
+  useEffect(() => {
+    const loadLabourRequests = async () => {
+      let items: WorkRequest[] = [];
+      try {
+        items = listLocalWorkRequests();
+      } catch (e) {
+        items = [];
+      }
+      try {
+        const remote = await fetchAllSubmissions();
+        const remoteReqs: WorkRequest[] = remote
+          .filter((s: any) => s.type === 'work_request' && s.data)
+          .map((s: any) => ({ ...s.data, created_at: s.data.created_at || s.created_at }));
+        const byId = new Map<string, WorkRequest>();
+        [...items, ...remoteReqs].forEach((r: any) => {
+          const existing = byId.get(r.id);
+          if (!existing || new Date((r as any).updated_at || r.created_at) > new Date((existing as any).updated_at || existing.created_at)) {
+            byId.set(r.id, r);
+          }
+        });
+        items = Array.from(byId.values());
+      } catch (e) {
+        // offline — local copy is enough
+      }
+      items = items.filter((r) => r.kind === 'project' && r.status === 'Open')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setLabourRequests(items);
+    };
+    loadLabourRequests();
+    const onStorage = () => loadLabourRequests();
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onStorage);
+    const interval = setInterval(loadLabourRequests, 3000);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onStorage);
+      clearInterval(interval);
+    };
+  }, []);
   
+  // Apply to labour request (role + start date)
+  const [applyReq, setApplyReq] = useState<WorkRequest | null>(null);
+  const [applyProfession, setApplyProfession] = useState('');
+  const [applyStartDate, setApplyStartDate] = useState('');
+
   // New Project State (Client only)
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
-  const [newProjectService, setNewProjectService] = useState<ServiceType>(ServiceType.CONSTRUCTION);
-  const [newProjectDesc, setNewProjectDesc] = useState('');
 
   // Support & About Modals
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -1641,83 +1758,6 @@ const App: React.FC = () => {
     // No op for demo
   };
 
-  // Handle new project submission
-  const handleCreateProject = () => {
-    const generatedId = Math.random().toString(36).substr(2, 9);
-    const newProject: Project = {
-      id: generatedId,
-      title: `${newProjectService} Project`,
-      description: newProjectDesc,
-      serviceType: newProjectService,
-      budget: 1000, // Default mock budget
-      status: 'Pending',
-      paymentStatus: PaymentStatus.PENDING,
-      date: new Date().toISOString().split('T')[0],
-      clientName: currentRole === UserRole.VENDOR ? 'You (Partner/Vendor)' : 'You (Client)',
-    };
-    setProjects([newProject, ...projects]);
-    saveSubmission('service_request', newProject);
-
-    // Also add to client requirements for Live Bidding / Vendor viewing
-    const newClientReq: ClientRequirement = {
-      id: `req-${generatedId}`,
-      title: `Client Request: Urgent ${newProjectService}`,
-      description: newProjectDesc,
-      category: newProjectService,
-      budget: '₹1,50,000',
-      client: 'You (Client)',
-      location: 'Noida Sector 62',
-      urgency: 'Urgently Needed',
-      status: 'Open'
-    };
-    setClientReqs(prev => [newClientReq, ...prev]);
-    
-    // Add auto-message acknowledging receipt
-    const autoMsg: ChatMessage = {
-      id: Date.now().toString(),
-      senderId: 'system',
-      senderName: 'System',
-      senderRole: 'Admin',
-      text: `We received your request for "${newProject.title}". We have published it to live vendors.`,
-      timestamp: new Date().toISOString(),
-      projectId: newProject.id
-    };
-    
-    const updatedMessages = [...messages, autoMsg];
-    setMessages(updatedMessages);
-
-    setShowNewProjectModal(false);
-    setNewProjectDesc('');
-
-    // Simulate Vendor replying / submitting a bid automatically after 4 seconds
-    setTimeout(() => {
-      const vendorNames = [
-        'Apex General Contractors',
-        'Radhe Shyam Construction Corp',
-        'Vanguard Civil & Interiors',
-        'Star Builders & Fabricators'
-      ];
-      const randomVendor = vendorNames[Math.floor(Math.random() * vendorNames.length)];
-      const offeredPrice = '₹1,38,000';
-      const replyTerm = 'Can initiate work immediately tomorrow. Quality guaranteed.';
-
-      const vendorReply: ChatMessage = {
-        id: (Date.now() + 500).toString(),
-        senderId: 'vendor-bid-auto',
-        senderName: randomVendor,
-        senderRole: 'Vendor',
-        text: `⚡ NEW BID RECEIVED: ${randomVendor} has replied with an estimate of ${offeredPrice} for your request: "${newProject.title}". Timeline: ${replyTerm}`,
-        timestamp: new Date().toISOString(),
-        projectId: generatedId
-      };
-
-      setMessages(prev => [...prev, vendorReply]);
-
-      // Update requirement status in list
-      setClientReqs(prev => prev.map(r => r.id === `req-${generatedId}` ? { ...r, status: 'Bid Submitted' } : r));
-    }, 4000);
-  };
-
   const handlePaymentSuccess = (projectId: string) => {
     setProjects(projects.map(p => 
       p.id === projectId ? { ...p, paymentStatus: PaymentStatus.PAID, status: 'In Progress' } : p
@@ -1733,6 +1773,7 @@ const App: React.FC = () => {
     ));
 
     // 2. Send Message to Client
+    const currentUserIdForMsg = (auth as any)?.user?.id || 'user';
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       senderId: 'admin',
@@ -1740,34 +1781,31 @@ const App: React.FC = () => {
       senderRole: 'Admin',
       text: `Good news! We have assigned '${vendor.name}' to your project '${updatedProject?.title}'. They will contact you shortly.`,
       timestamp: new Date().toISOString(),
-      projectId: projectId
+      projectId: projectId,
+      recipientId: currentUserIdForMsg,
+      conversationId: currentUserIdForMsg,
     };
     setMessages(prev => [...prev, newMessage]);
+    saveSubmission('chat_message', newMessage).catch(() => {});
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = (text: string, peer?: { id: string; name: string; role: string }) => {
+    const currentUserId = (auth as any)?.user?.id || 'user';
+    const senderName = (auth as any)?.user?.name || (currentRole === UserRole.CLIENT ? 'You' : currentRole!);
     const newMsg: ChatMessage = {
       id: Date.now().toString(),
-      senderId: 'user',
-      senderName: currentRole === UserRole.CLIENT ? 'You' : currentRole!,
+      senderId: currentUserId,
+      senderName: senderName,
       senderRole: currentRole === UserRole.CLIENT ? 'Client' : currentRole === UserRole.VENDOR ? 'Vendor' : 'Channel Partner',
       text: text,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      recipientId: peer?.id,
+      recipientName: peer?.name,
+      recipientRole: peer?.role,
+      conversationId: peer?.id,
     };
-    setMessages([...messages, newMsg]);
-
-    // Simulate Admin Reply
-    setTimeout(() => {
-      const replyMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        senderId: 'support',
-        senderName: 'Support Agent',
-        senderRole: 'Admin',
-        text: 'Thanks for your message. An agent will review it shortly.',
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, replyMsg]);
-    }, 2000);
+    setMessages(prev => [...prev, newMsg]);
+    saveSubmission('chat_message', newMsg).catch(() => {});
   };
 
   // Auth gate: loading, then super admin console or the marketplace home.
@@ -2013,15 +2051,33 @@ const App: React.FC = () => {
                 Dashboard
               </button>
 
+              <div className="pt-4 pb-2 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Marketplace
+              </div>
+              <button 
+                onClick={() => setActiveTab('requests')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'requests' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                <Search size={20} />
+                Find
+              </button>
+              <button 
+                onClick={() => setActiveTab('myPosting')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'myPosting' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                <FileText size={20} />
+                My Posting
+              </button>
+
               <button 
                 onClick={() => setActiveTab('messages')}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'messages' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <MessageSquare size={20} />
                 Chat Window
-                {messages.length > 0 && (
+                {unreadCount > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                    {messages.length}
+                    {unreadCount}
                   </span>
                 )}
               </button>
@@ -2099,6 +2155,9 @@ const App: React.FC = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          {activeTab === 'requests' && <RequestsView mode="all" />}
+          {activeTab === 'myPosting' && <MyPosting />}
+
           {activeTab === 'messages' && (
              <ChatWindow 
                currentUserRole={currentRole} 
@@ -2353,28 +2412,42 @@ const App: React.FC = () => {
                         👷 Active Instant Labour Requests
                       </h3>
                       <div className="space-y-3">
-                        {[
-                          { id: 'Req-8941', type: 'Slab Mason', strength: '3 Workers', timing: 'Night Work (Today)', wage: '₹950', status: 'Pending Confirmation' },
-                          { id: 'Req-8942', type: 'Carpenter Helper', strength: '2 Workers', timing: '2nd Half of Day', wage: '₹750', status: 'Pending Confirmation' },
-                          { id: 'Req-8943', type: 'Wall Painter', strength: '4 Workers', timing: '1 Day Before (Tomorrow)', wage: '₹800', status: 'Pending Confirmation' }
-                        ].map((req, i) => (
-                          <div key={i} className="bg-gray-50 p-4 rounded-xl border border-gray-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded">{req.id}</span>
-                                <span className="text-sm font-black text-gray-800">{req.type}</span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">Required: {req.strength} | Timing: {req.timing}</p>
-                              <p className="text-xs text-indigo-600 font-bold mt-0.5">Offered wage: {req.wage}/day</p>
-                            </div>
-                            <button 
-                              onClick={() => alert(`Inquiry reservation confirmed successfully! Client has been notified. 10 workers have already viewed this request.`)}
-                              className="text-xs font-bold px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-lg transition-colors"
-                            >
-                              Confirm Request
-                            </button>
+                        {labourRequests.length === 0 ? (
+                          <div className="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-200 text-center">
+                            <p className="text-sm text-gray-500 font-medium">No active labour requests right now.</p>
+                            <p className="text-xs text-gray-400 mt-1">New Work Projects posted via Requests will appear here — latest first.</p>
                           </div>
-                        ))}
+                        ) : labourRequests.map((req) => {
+                          const totalWorkers = req.workers?.reduce((s, w) => s + w.count, 0) || 0;
+                          const strengthLabel = req.workers?.length
+                            ? req.workers.map((w) => `${w.count} ${w.profession}`).join(', ')
+                            : (totalWorkers ? `${totalWorkers} Workers` : 'As per description');
+                          const shortId = req.id.length > 10 ? req.id.slice(0, 8).toUpperCase() : req.id;
+                          return (
+                            <div key={req.id} className="bg-gray-50 p-4 rounded-xl border border-gray-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded">{shortId}</span>
+                                  <span className="text-sm font-black text-gray-800 truncate">{req.title || req.workers?.[0]?.profession || 'Labour Required'}</span>
+                                  {req.workType && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white uppercase">{req.workType}</span>}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1 truncate">Required: {strengthLabel} | Timing: {req.timings || 'Flexible'}</p>
+                                <p className="text-xs text-indigo-600 font-bold mt-0.5 truncate">Offered wage: {req.paymentPerDay || 'As per discussion'}</p>
+                                {req.location && <p className="text-[11px] text-gray-400 mt-0.5 truncate">📍 {req.location} · by {req.userName}</p>}
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  setApplyReq(req);
+                                  setApplyProfession(req.workers?.[0]?.profession || 'Mason');
+                                  setApplyStartDate(new Date().toISOString().split('T')[0]);
+                                }}
+                                className="text-xs font-bold px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-lg transition-colors shrink-0"
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {/* Section for Material Supplier Instant Yard Bookings */}
@@ -2445,6 +2518,89 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Apply modal */}
+                  {applyReq && (
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in-95">
+                        <div className="flex justify-between items-start gap-4 mb-4">
+                          <div>
+                            <h3 className="text-base font-bold text-gray-900">Apply for Work</h3>
+                            <p className="text-xs text-gray-500 mt-1 truncate">{applyReq.title || 'Labour Request'} · {applyReq.location}</p>
+                          </div>
+                          <button onClick={() => setApplyReq(null)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"><span className="text-lg leading-none">×</span></button>
+                        </div>
+                        {applyReq.workers?.length ? (
+                          <p className="text-xs text-gray-500 mb-3">This project needs: {applyReq.workers.map((w) => `${w.count} ${w.profession}`).join(', ')}</p>
+                        ) : null}
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Apply as *</label>
+                            <select
+                              value={applyProfession}
+                              onChange={(e) => setApplyProfession(e.target.value)}
+                              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                            >
+                              {(applyReq.workers?.length
+                                ? applyReq.workers.map((w) => w.profession)
+                                : ['Mason','Carpenter','Electrician','Plumber','Painter','Bar Bender','Welder','Tile Fitter','Helper','Supervisor']
+                              ).map((p) => (
+                                <option key={p} value={p}>{p}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Available from (start date) *</label>
+                            <input
+                              type="date"
+                              value={applyStartDate}
+                              onChange={(e) => setApplyStartDate(e.target.value)}
+                              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                              required
+                            />
+                          </div>
+                          <div className="flex gap-3 pt-1">
+                            <button
+                              onClick={() => setApplyReq(null)}
+                              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!applyProfession || !applyStartDate) {
+                                  alert('Please select a role and start date.');
+                                  return;
+                                }
+                                const applicant = auth.user;
+                                await saveSubmission('application', {
+                                  id: `app-${Date.now()}`,
+                                  requestId: applyReq.id,
+                                  requestTitle: applyReq.title,
+                                  profession: applyProfession,
+                                  startDate: applyStartDate,
+                                  applicantId: applicant?.id || 'unknown',
+                                  applicantName: applicant?.name || 'Labour User',
+                                  applicantPhone: applicant?.phone || '',
+                                  applicantRole: applicant?.role || 'LABOUR',
+                                  location: applyReq.location,
+                                  timings: applyReq.timings,
+                                  paymentPerDay: applyReq.paymentPerDay,
+                                  created_at: new Date().toISOString(),
+                                  status: 'Applied',
+                                });
+                                alert(`Applied as ${applyProfession} starting ${applyStartDate}. The poster (${applyReq.userName}) has been notified.`);
+                                setApplyReq(null);
+                              }}
+                              className="flex-1 py-2.5 rounded-lg bg-slate-900 hover:bg-black text-white text-sm font-bold"
+                            >
+                              Submit Application
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3030,51 +3186,7 @@ const App: React.FC = () => {
       )}
 
       {showNewProjectModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Post New Request</h3>
-              <button onClick={() => setShowNewProjectModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-                <select 
-                  value={newProjectService}
-                  onChange={(e) => setNewProjectService(e.target.value as ServiceType)}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                >
-                  {Object.values(ServiceType).map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <AIAssistant 
-                  selectedService={newProjectService}
-                  onDescriptionGenerated={setNewProjectDesc}
-                />
-                <textarea 
-                  value={newProjectDesc}
-                  onChange={(e) => setNewProjectDesc(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg h-32 focus:ring-2 focus:ring-orange-500 focus:outline-none resize-none"
-                  placeholder="Describe your project requirements..."
-                />
-              </div>
-
-              <button 
-                onClick={handleCreateProject}
-                disabled={!newProjectDesc.trim()}
-                className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-bold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Post Project
-              </button>
-            </div>
-          </div>
-        </div>
+        <PostRequestModal onClose={() => setShowNewProjectModal(false)} initialTab="project" />
       )}
 
       {selectedProjectForPayment && (

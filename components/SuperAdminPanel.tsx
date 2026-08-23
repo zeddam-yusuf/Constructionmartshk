@@ -11,9 +11,11 @@ import {
   adminCreateJob,
 } from '../services/admin';
 import Logo from './Logo';
+import { fetchAllSubmissions } from '../services/supabase';
 import {
   Users, Briefcase, LayoutDashboard, LogOut, Search, ShieldAlert, ShieldCheck,
-  Trash2, Ban, CheckCircle2, Loader2, RefreshCw, UserCog, Plus, X,
+  Trash2, Ban, CheckCircle2, Loader2, RefreshCw, UserCog, Plus, X, ClipboardList, Send, Eye,
+  FileText, HardHat,
 } from 'lucide-react';
 
 const ROLE_OPTIONS = [
@@ -43,7 +45,7 @@ const btn =
   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95';
 
 export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
-  const [tab, setTab] = useState<'overview' | 'users' | 'jobs'>('overview');
+  const [tab, setTab] = useState<'overview' | 'users' | 'jobs' | 'postings' | 'applications'>('overview');
 
   // Users
   const [users, setUsers] = useState<AuthUser[]>([]);
@@ -54,6 +56,13 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
   // Jobs
   const [jobs, setJobs] = useState<any[]>([]);
   const [jobsBusy, setJobsBusy] = useState(false);
+
+  // Postings & Applications (Work Requests + Applications)
+  const [postings, setPostings] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [postingsBusy, setPostingsBusy] = useState(false);
+  const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
+  const [postingsSearch, setPostingsSearch] = useState('');
 
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -157,8 +166,87 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
     }
   }, []);
 
+  const loadPostings = useCallback(async () => {
+    setPostingsBusy(true);
+    try {
+      let items: any[] = [];
+      try {
+        const raw = localStorage.getItem('const_mart_local_work_requests');
+        items = raw ? JSON.parse(raw) : [];
+      } catch {}
+      try {
+        const remote = await fetchAllSubmissions();
+        const remoteReqs = remote.filter((s: any) => s.type === 'work_request' && s.data).map((s: any) => ({ ...s.data, created_at: s.data.created_at || s.created_at }));
+        if (remoteReqs.length) {
+          const byId = new Map<string, any>();
+          [...items, ...remoteReqs].forEach((r: any) => {
+            const ex = byId.get(r.id);
+            if (!ex || new Date(r.updated_at || r.created_at).getTime() > new Date(ex.updated_at || ex.created_at).getTime()) byId.set(r.id, r);
+          });
+          items = Array.from(byId.values());
+        }
+      } catch {}
+      items.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setPostings(items);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load postings.');
+    } finally {
+      setPostingsBusy(false);
+    }
+  }, []);
+
+  const loadApplications = useCallback(async () => {
+    try {
+      let items: any[] = [];
+      try {
+        const raw = localStorage.getItem('const_mart_local_applications');
+        items = raw ? JSON.parse(raw) : [];
+      } catch {}
+      try {
+        const remote = await fetchAllSubmissions();
+        const remoteApps = remote.filter((s: any) => s.type === 'application' && s.data).map((s: any) => s.data);
+        if (remoteApps.length) {
+          const byId = new Map<string, any>();
+          [...items, ...remoteApps].forEach((a: any) => byId.set(a.id, a));
+          items = Array.from(byId.values());
+        }
+      } catch {}
+      items.sort((a: any, b: any) => new Date(b.created_at || b.startDate || 0).getTime() - new Date(a.created_at || a.startDate || 0).getTime());
+      setApplications(items);
+    } catch {}
+  }, []);
+
+  const deletePosting = async (id: string, title: string) => {
+    if (!window.confirm(`Delete posting "${title || id}"? This cannot be undone.`)) return;
+    try {
+      const raw = localStorage.getItem('const_mart_local_work_requests');
+      let list: any[] = raw ? JSON.parse(raw) : [];
+      list = list.filter((r: any) => r.id !== id);
+      localStorage.setItem('const_mart_local_work_requests', JSON.stringify(list));
+    } catch {}
+    try { const { supabase } = await import('../services/supabase'); await supabase.from('submissions').delete().eq('id', id); } catch {}
+    flash('Posting deleted.');
+    loadPostings();
+    loadApplications();
+  };
+
+  const deleteApplication = async (id: string) => {
+    if (!window.confirm('Delete this application?')) return;
+    try {
+      const raw = localStorage.getItem('const_mart_local_applications');
+      let list: any[] = raw ? JSON.parse(raw) : [];
+      list = list.filter((a: any) => a.id !== id);
+      localStorage.setItem('const_mart_local_applications', JSON.stringify(list));
+    } catch {}
+    try { const { supabase } = await import('../services/supabase'); await supabase.from('submissions').delete().eq('id', id); } catch {}
+    flash('Application deleted.');
+    loadApplications();
+  };
+
   useEffect(() => { loadUsers(); }, [loadUsers]);
   useEffect(() => { loadJobs(); }, [loadJobs]);
+  useEffect(() => { loadPostings(); }, [loadPostings]);
+  useEffect(() => { loadApplications(); }, [loadApplications]);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -201,10 +289,13 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
     const total = users.length;
     const blocked = users.filter(u => u.status === 'blocked').length;
     const openJobs = jobs.filter(j => j.status === 'Open').length;
+    const totalPostings = postings.length;
+    const openPostings = postings.filter((p: any) => p.status === 'Open').length;
+    const totalApplications = applications.length;
     const byRole: Record<string, number> = {};
     users.forEach(u => { byRole[u.role] = (byRole[u.role] || 0) + 1; });
-    return { total, blocked, openJobs, byRole };
-  }, [users, jobs]);
+    return { total, blocked, openJobs, totalPostings, openPostings, totalApplications, byRole };
+  }, [users, jobs, postings, applications]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
@@ -226,11 +317,13 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {([
             { key: 'overview', label: 'Overview', icon: LayoutDashboard },
             { key: 'users', label: 'Users', icon: Users },
             { key: 'jobs', label: 'Job Listings', icon: Briefcase },
+            { key: 'postings', label: 'Postings', icon: ClipboardList },
+            { key: 'applications', label: 'Applications', icon: Send },
           ] as const).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -242,6 +335,8 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
               <Icon size={16} /> {label}
               {key === 'users' && <span className="bg-black/10 px-1.5 rounded text-xs">{users.length}</span>}
               {key === 'jobs' && <span className="bg-black/10 px-1.5 rounded text-xs">{jobs.length}</span>}
+              {key === 'postings' && <span className="bg-black/10 px-1.5 rounded text-xs">{postings.length}</span>}
+              {key === 'applications' && <span className="bg-black/10 px-1.5 rounded text-xs">{applications.length}</span>}
             </button>
           ))}
         </div>
@@ -282,6 +377,33 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
                 <div>
                   <div className="text-2xl font-black text-gray-900">{stats.openJobs}</div>
                   <div className="text-xs text-gray-500 font-semibold">Open job listings</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center"><ClipboardList size={22} /></div>
+                <div>
+                  <div className="text-2xl font-black text-gray-900">{stats.totalPostings}</div>
+                  <div className="text-xs text-gray-500 font-semibold">Total postings (Find)</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center"><Send size={22} /></div>
+                <div>
+                  <div className="text-2xl font-black text-gray-900">{stats.totalApplications}</div>
+                  <div className="text-xs text-gray-500 font-semibold">Total applications</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center"><HardHat size={22} /></div>
+                <div>
+                  <div className="text-2xl font-black text-gray-900">{stats.openPostings}</div>
+                  <div className="text-xs text-gray-500 font-semibold">Open postings</div>
                 </div>
               </div>
             </div>
@@ -455,6 +577,146 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        {/* Postings — all Find requests */}
+        {tab === 'postings' && (
+          <div className="mt-6 space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+                <h3 className="text-sm font-black text-gray-900 flex items-center gap-2"><ClipboardList size={16} className="text-orange-600" /> All Postings (Find)</h3>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input value={postingsSearch} onChange={e => setPostingsSearch(e.target.value)} placeholder="Search title, location, phone..." className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" />
+                  </div>
+                  <button onClick={() => { loadPostings(); loadApplications(); }} className={`${btn} bg-orange-600 text-white hover:bg-orange-700`}>
+                    {postingsBusy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Refresh
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-100">
+                      <th className="px-4 py-3 font-black">Date</th>
+                      <th className="px-4 py-3 font-black">Type</th>
+                      <th className="px-4 py-3 font-black">Title / Professions</th>
+                      <th className="px-4 py-3 font-black">Posted By</th>
+                      <th className="px-4 py-3 font-black">Location</th>
+                      <th className="px-4 py-3 font-black">Payment</th>
+                      <th className="px-4 py-3 font-black">Status</th>
+                      <th className="px-4 py-3 font-black text-center">Applications</th>
+                      <th className="px-4 py-3 font-black text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {postings.length === 0 && !postingsBusy && (
+                      <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm font-semibold">No postings found.</td></tr>
+                    )}
+                    {postings
+                      .filter(p => !postingsSearch || (p.title || '').toLowerCase().includes(postingsSearch.toLowerCase()) || (p.location || '').toLowerCase().includes(postingsSearch.toLowerCase()) || (p.userName || '').toLowerCase().includes(postingsSearch.toLowerCase()) || (p.userPhone || '').includes(postingsSearch))
+                      .map(p => {
+                        const appsCount = applications.filter(a => a.requestId === p.id).length;
+                        const isProject = p.kind === 'project';
+                        return (
+                          <tr key={p.id} className={`border-b border-gray-50 hover:bg-slate-50 ${selectedPostingId === p.id ? 'bg-orange-50' : ''}`}>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
+                            <td className="px-4 py-3"><span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${isProject ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{isProject ? 'Project' : 'Available'}</span></td>
+                            <td className="px-4 py-3 max-w-[220px]"><div className="font-bold text-gray-900 truncate">{p.title || (p.professions || []).slice(0,2).join(', ') || '-'}</div><div className="text-[11px] text-gray-500 truncate">{isProject ? (p.workers ? p.workers.map((w:any)=>`${w.count} ${w.profession}`).join(', ') : '') : (p.professions || []).join(', ')}</div></td>
+                            <td className="px-4 py-3"><div className="font-semibold text-gray-800 text-xs">{p.userName}</div><div className="text-[11px] text-gray-500 font-mono">{p.userPhone} · {p.userRole}</div></td>
+                            <td className="px-4 py-3 text-xs text-gray-600 max-w-[140px] truncate">{p.location || '-'}</td>
+                            <td className="px-4 py-3 text-xs font-semibold text-gray-800">{p.paymentPerDay || p.costPerDay || '-'}</td>
+                            <td className="px-4 py-3"><span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700">{p.status}</span></td>
+                            <td className="px-4 py-3 text-center"><span className="inline-flex items-center gap-1 bg-slate-900 text-white text-[11px] font-bold px-2 py-1 rounded-lg">{appsCount}</span></td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button onClick={() => setSelectedPostingId(p.id)} className={`${btn} bg-blue-50 text-blue-600 hover:bg-blue-100`} title="View applications"><Eye size={13} /> View</button>
+                                <button onClick={() => deletePosting(p.id, p.title || p.id)} className={`${btn} bg-red-50 text-red-600 hover:bg-red-100`} title="Delete posting"><Trash2 size={13} /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {selectedPostingId && (
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-gray-100 flex items-center justify-between">
+                  <h4 className="text-sm font-black text-gray-800 flex items-center gap-2"><Users size={14} className="text-orange-600" /> Applications for selected posting <span className="text-xs font-mono text-gray-500">{selectedPostingId.slice(0,8)}</span></h4>
+                  <button onClick={() => setSelectedPostingId(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X size={14} /></button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="text-left text-[11px] font-black text-gray-500 uppercase border-b border-gray-100"><th className="px-4 py-2">Applicant</th><th className="px-4 py-2">Role</th><th className="px-4 py-2">Applied as</th><th className="px-4 py-2">Start date</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Applied</th><th className="px-4 py-2 text-right">Actions</th></tr></thead>
+                    <tbody>
+                      {applications.filter(a => a.requestId === selectedPostingId).length === 0 ? (
+                        <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400 text-sm">No applications for this posting yet.</td></tr>
+                      ) : applications.filter(a => a.requestId === selectedPostingId).map(a => (
+                        <tr key={a.id} className="border-b border-gray-50 hover:bg-slate-50">
+                          <td className="px-4 py-2.5 font-bold text-gray-900">{a.applicantName}</td>
+                          <td className="px-4 py-2.5 text-xs"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[11px]">{a.applicantRole || '-'}</span></td>
+                          <td className="px-4 py-2.5"><span className="bg-orange-50 text-orange-700 border border-orange-100 text-xs font-bold px-2 py-1 rounded-lg">{a.profession}</span></td>
+                          <td className="px-4 py-2.5 text-xs">{a.startDate ? new Date(a.startDate).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-2.5 text-xs font-mono">{a.applicantPhone || '-'}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500">{a.created_at ? new Date(a.created_at).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-2.5 text-right"><button onClick={() => deleteApplication(a.id)} className={`${btn} bg-red-50 text-red-600 hover:bg-red-100`}><Trash2 size={12} /></button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Applications — all */}
+        {tab === 'applications' && (
+          <div className="mt-6 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-black text-gray-900 flex items-center gap-2"><Send size={16} className="text-orange-600" /> All Applications</h3>
+              <button onClick={() => { loadApplications(); loadPostings(); }} className={`${btn} bg-orange-600 text-white hover:bg-orange-700`}><RefreshCw size={14} /> Refresh</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-100">
+                    <th className="px-4 py-3 font-black">Date</th>
+                    <th className="px-4 py-3 font-black">Applicant</th>
+                    <th className="px-4 py-3 font-black">Applied as</th>
+                    <th className="px-4 py-3 font-black">Start date</th>
+                    <th className="px-4 py-3 font-black">Posting</th>
+                    <th className="px-4 py-3 font-black">Posted By</th>
+                    <th className="px-4 py-3 font-black text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm font-semibold">No applications found.</td></tr>
+                  ) : applications.map(a => {
+                    const posting = postings.find(p => p.id === a.requestId);
+                    return (
+                      <tr key={a.id} className="border-b border-gray-50 hover:bg-slate-50">
+                        <td className="px-4 py-3 text-xs text-gray-600">{a.created_at ? new Date(a.created_at).toLocaleDateString() : '-'}</td>
+                        <td className="px-4 py-3"><div className="font-bold text-gray-900">{a.applicantName}</div><div className="text-[11px] text-gray-500">{a.applicantPhone} · {a.applicantRole}</div></td>
+                        <td className="px-4 py-3"><span className="bg-orange-50 text-orange-700 border border-orange-100 text-xs font-bold px-2 py-1 rounded-lg">{a.profession}</span></td>
+                        <td className="px-4 py-3 text-xs">{a.startDate ? new Date(a.startDate).toLocaleDateString() : '-'}</td>
+                        <td className="px-4 py-3 max-w-[200px]"><div className="font-semibold text-gray-800 text-xs truncate">{posting?.title || a.requestTitle || a.requestId.slice(0,8)}</div><div className="text-[11px] text-gray-500 truncate">{posting?.location || '-'}</div></td>
+                        <td className="px-4 py-3 text-xs"><div className="font-semibold text-gray-700">{posting?.userName || '-'}</div><div className="text-[11px] text-gray-500 font-mono">{posting?.userPhone || ''}</div></td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {a.requestId && <button onClick={() => { setSelectedPostingId(a.requestId); setTab('postings'); }} className={`${btn} bg-blue-50 text-blue-600 hover:bg-blue-100`}><Eye size={12} /> Posting</button>}
+                            <button onClick={() => deleteApplication(a.id)} className={`${btn} bg-red-50 text-red-600 hover:bg-red-100`}><Trash2 size={12} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
