@@ -87,7 +87,8 @@ create table if not exists public.service_requests (
   created_at timestamptz default now()
 );
 
--- Row level security: allow anon (browser) full access.
+-- Row level security: allow anon + authenticated (browser) full access.
+-- Works with both legacy anon JWT (eyJ...) and new publishable key (sb_publishable_...) and sb_secret.
 alter table public.auth_users enable row level security;
 alter table public.jobs enable row level security;
 alter table public.bookings enable row level security;
@@ -98,10 +99,18 @@ alter table public.properties enable row level security;
 alter table public.applications enable row level security;
 alter table public.service_requests enable row level security;
 
+-- Recreate policies idempotently (drop if exists first, for older Postgres without IF NOT EXISTS)
 do $$
 declare t text;
 begin
   foreach t in array array['auth_users','jobs','bookings','submissions','contacts','registrations','properties','applications','service_requests'] loop
-    execute format('create policy if not exists "anon full access %1$s" on public.%1$I for all using (true) with check (true)', t);
+    execute format('drop policy if exists "anon full access %1$s" on public.%1$I', t, t);
+    execute format('create policy "anon full access %1$s" on public.%1$I for all to anon, authenticated using (true) with check (true)', t, t);
+    -- Also allow publishable key (mapped to anon) and service_role explicitly
+    execute format('drop policy if exists "public full access %1$s" on public.%1$I', t, t);
+    execute format('create policy "public full access %1$s" on public.%1$I for all to public using (true) with check (true)', t, t);
   end loop;
 end $$;
+
+-- Optional: ensure tables are exposed via PostgREST (needed if created outside setup)
+-- Run Supabase Dashboard > SQL Editor > paste this file > Run.

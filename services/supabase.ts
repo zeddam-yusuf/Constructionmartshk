@@ -106,18 +106,24 @@ export const removeBooking = async (id: string) => {
 
 /**
  * Save generic submissions (Registrations, Contact Us, Property listings, Jobs, Service requests)
+ * Strategy: 1) typed mirror table -> 2) submissions -> 3) bookings fallback (bookings always exists)
+ * This guarantees remote persistence even when setup.sql has not been fully run.
  */
 export const saveSubmission = async (type: string, data: any) => {
-  try {
-    const id = data.id || Date.now().toString();
-    const payload = {
-      id,
-      type,
-      status: data.status || 'Pending',
-      data: data,
-      created_at: new Date().toISOString()
-    };
+  const id = data.id || Date.now().toString();
+  const payload = {
+    id,
+    type,
+    status: data.status || 'Pending',
+    data: data,
+    created_at: new Date().toISOString()
+  };
 
+  let remoteSaved = false;
+
+  if (!supabase) {
+    console.warn('Supabase not configured (missing VITE_SUPABASE_URL/KEY) — saving locally only.');
+  } else {
     // 1. Try writing to a specific table (e.g., contacts, registrations)
     const specificTable = 
       type === 'contact' ? 'contacts' :
@@ -138,24 +144,55 @@ export const saveSubmission = async (type: string, data: any) => {
             created_at: payload.created_at
           }, { onConflict: 'id' });
         
-        if (specificErr) {
+        if (!specificErr) remoteSaved = true;
+        else if (specificErr.code !== 'PGRST205') {
           console.warn(`Supabase specific table "${specificTable}" upsert warning:`, specificErr.message);
         }
       } catch (e: any) {
-        // Table might not exist, proceed to general submissions
+        // Table might not exist, proceed
       }
     }
 
-    // 2. Write to the general submissions table
-    const { error } = await supabase
-      .from('submissions')
-      .upsert(payload, { onConflict: 'id' });
-
-    if (error) {
-      console.warn('Supabase generic submissions upsert warning:', error.message);
+    // 2. Write to the general submissions table (if it exists)
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .upsert(payload, { onConflict: 'id' });
+      if (!error) remoteSaved = true;
+      else if (error.code !== 'PGRST205') {
+        console.warn('Supabase generic submissions upsert warning:', error.message);
+      }
+    } catch (e: any) {
+      // table missing
     }
 
-    // Save locally to ensure persistent rendering in case of database access issues
+    // 3. Final fallback — bookings table ALWAYS exists (verified live). Store as booking_type=type
+    // This is the critical remote save that currently succeeds for 'hourly'/'supplier'.
+    try {
+      const { error: bookingsErr } = await supabase
+        .from('bookings')
+        .upsert({
+          id,
+          booking_type: type,
+          status: payload.status,
+          details: data,
+          created_at: payload.created_at
+        }, { onConflict: 'id' });
+      if (!bookingsErr) remoteSaved = true;
+      else {
+        console.warn('Supabase bookings fallback upsert warning:', bookingsErr.message);
+      }
+    } catch (e: any) {
+      console.error('Supabase bookings fallback failed:', e?.message || e);
+    }
+
+    if (!remoteSaved) {
+      console.error(`Supabase saveSubmission remote save FAILED for type="${type}" id=${id}. All tables missing or RLS blocked. Check Supabase SQL Editor: run setup.sql. Data kept locally only.`);
+    }
+  }
+
+  // Save locally to ensure persistent rendering in case of database access issues
+  try {
     const localKey = `const_mart_local_${type}s`;
     const existing = localStorage.getItem(localKey);
     const list = existing ? JSON.parse(existing) : [];
@@ -166,25 +203,27 @@ export const saveSubmission = async (type: string, data: any) => {
       list.unshift({ id, ...data });
     }
     localStorage.setItem(localKey, JSON.stringify(list));
-
-  } catch (err: any) {
-    console.error('Failed to save submission to Supabase:', err?.message || err);
-  }
+  } catch (e) {}
 };
 
 /**
- * Remove general submission
+ * Remove general submission — tries submissions + bookings
  */
 export const removeSubmission = async (id: string) => {
+  if (!supabase) return;
   try {
     const { error } = await supabase
       .from('submissions')
       .delete()
       .eq('id', id);
-
-    if (error) {
+    if (error && error.code !== 'PGRST205') {
       console.warn('Supabase submissions delete warning:', error.message);
     }
+  } catch (err: any) {}
+  // Also remove bookings fallback row (where saveSubmission stored it)
+  try {
+    const { error } = await supabase.from('bookings').delete().eq('id', id);
+    if (error) console.warn('Supabase bookings delete warning:', error.message);
   } catch (err: any) {
     console.error('Failed to remove submission:', err?.message || err);
   }
@@ -192,21 +231,45 @@ export const removeSubmission = async (id: string) => {
 
 /**
  * Fetch all submissions for the Admin Panel
+ * Tries submissions first, falls back to bookings (booking_type not hourly/supplier)
  */
 export const fetchAllSubmissions = async (): Promise<any[]> => {
+  if (!supabase) return [];
+  // 1. Try submissions table (ideal)
   try {
     const { data, error } = await supabase
       .from('submissions')
       .select('*')
       .order('created_at', { ascending: false });
-
-    if (error) {
+    if (!error && data && data.length) return data;
+    if (error && error.code !== 'PGRST205') {
       console.warn('Supabase fetch submissions warning:', error.message);
+    }
+  } catch (err: any) {
+    // table missing
+  }
+  // 2. Fallback: read from bookings where booking_type is not the two native booking types
+  // This is where saveSubmission fallback stores data when submissions is missing.
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('Supabase fetch bookings fallback warning:', error.message);
       return [];
     }
-    return data || [];
+    // Map bookings rows back to submissions shape
+    const filtered = (data || []).filter((r: any) => !['hourly','supplier'].includes(r.booking_type));
+    return filtered.map((r: any) => ({
+      id: r.id,
+      type: r.booking_type,
+      status: r.status,
+      data: r.details,
+      created_at: r.created_at,
+    }));
   } catch (err: any) {
-    console.error('Failed to fetch submissions:', err?.message || err);
+    console.error('Failed to fetch submissions fallback:', err?.message || err);
     return [];
   }
 };
