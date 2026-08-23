@@ -1534,7 +1534,7 @@ const App: React.FC = () => {
     return INITIAL_MESSAGES;
   });
 
-  // Load chat history from database (Supabase submissions) and merge with local cache
+  // Load chat history from database (Supabase submissions via bookings fallback) and keep in sync
   useEffect(() => {
     const loadRemoteChat = async () => {
       try {
@@ -1554,7 +1554,15 @@ const App: React.FC = () => {
       } catch {}
     };
     loadRemoteChat();
+    // Poll for new messages every 4s so chat syncs across devices without manual refresh
+    const interval = setInterval(loadRemoteChat, 4000);
+    return () => clearInterval(interval);
   }, []);
+
+  // Persist messages to localStorage on every change (so refresh never loses pending messages)
+  useEffect(() => {
+    try { localStorage.setItem('const_mart_local_chat_messages', JSON.stringify(messages)); } catch {}
+  }, [messages]);
 
   // Unread chat count — only messages not sent by current user and newer than last time chat was opened
   const [chatLastReadAt, setChatLastReadAt] = useState<string>(() => {
@@ -1792,11 +1800,13 @@ const App: React.FC = () => {
   const handleSendMessage = (text: string, peer?: { id: string; name: string; role: string }) => {
     const currentUserId = (auth as any)?.user?.id || 'user';
     const senderName = (auth as any)?.user?.name || (currentRole === UserRole.CLIENT ? 'You' : currentRole!);
+    // Use actual role string so isMe / filtering works for all roles (PMC, LABOUR, BROKER, etc.)
+    const senderRole = currentRole ? String(currentRole) : 'Client';
     const newMsg: ChatMessage = {
       id: Date.now().toString(),
       senderId: currentUserId,
       senderName: senderName,
-      senderRole: currentRole === UserRole.CLIENT ? 'Client' : currentRole === UserRole.VENDOR ? 'Vendor' : 'Channel Partner',
+      senderRole: senderRole,
       text: text,
       timestamp: new Date().toISOString(),
       recipientId: peer?.id,
