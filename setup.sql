@@ -6,22 +6,42 @@
 -- Safe to re-run: all statements are idempotent.
 
 -- Users table (JWT auth users)
+-- Schema: ID, NAME, ROLE, CATEGORY, password_hash, SUB_CATEGORY, STATE, CITY, REMARKS, experience, gst_number, charges, email, status, phone
 create table if not exists public.auth_users (
   id text primary key,
   name text not null,
-  phone text not null unique,
   role text not null,
-  password_hash text not null,
-  status text not null default 'active',
-  email text,
-  city text,
-  company_name text,
   category text,
+  password_hash text not null,
+  sub_category text,
+  state text,
+  city text,
+  remarks text,
   experience text,
-  charges text,
   gst_number text,
+  charges text,
+  email text,
+  status text not null default 'active',
+  phone text not null unique,
   created_at timestamptz default now()
 );
+
+-- Migration for existing installs: add new columns if missing
+alter table public.auth_users add column if not exists category text;
+alter table public.auth_users add column if not exists sub_category text;
+alter table public.auth_users add column if not exists state text;
+alter table public.auth_users add column if not exists remarks text;
+alter table public.auth_users add column if not exists experience text;
+alter table public.auth_users add column if not exists gst_number text;
+alter table public.auth_users add column if not exists charges text;
+alter table public.auth_users add column if not exists email text;
+alter table public.auth_users add column if not exists city text;
+alter table public.auth_users add column if not exists status text;
+alter table public.auth_users add column if not exists phone text;
+alter table public.auth_users add column if not exists password_hash text;
+alter table public.auth_users add column if not exists created_at timestamptz default now();
+-- Drop deprecated column (company_name replaced by sub_category/remarks)
+alter table public.auth_users drop column if exists company_name;
 
 -- Job listings table (managed by super admin)
 create table if not exists public.jobs (

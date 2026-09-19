@@ -26,20 +26,28 @@ export interface SupabaseBooking {
 }
 
 /**
- * Fetch all bookings stored in Supabase
+ * Fetch all bookings stored in Supabase — paginated to bypass 1000 limit
  */
 export const fetchAllBookings = async (): Promise<SupabaseBooking[]> => {
   try {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('Supabase fetch bookings error:', error.message);
-      return [];
+    let all: SupabaseBooking[] = [];
+    let from = 0; const step = 1000;
+    while(true){
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from+step-1);
+      if (error) {
+        console.warn('Supabase fetch bookings error:', error.message);
+        return all;
+      }
+      if(!data||!data.length) break;
+      all = all.concat(data);
+      if(data.length < step) break;
+      from += step;
     }
-    return data || [];
+    return all;
   } catch (err: any) {
     console.error('Failed to fetch bookings from Supabase:', err?.message || err);
     return [];
@@ -106,9 +114,11 @@ export const removeBooking = async (id: string) => {
 
 /**
  * Save generic submissions (Registrations, Contact Us, Property listings, Jobs, Service requests)
- * Strategy: 1) typed mirror table -> 2) submissions -> 3) bookings fallback (bookings always exists)
- * This guarantees remote persistence even when setup.sql has not been fully run.
+ * Fallback-only mode (option 2): uses bookings table only to avoid 404s when setup.sql
+ * has not been run and user has no dashboard access. When setup.sql is run, set
+ * USE_SUBMISSIONS_TABLES = true to re-enable typed mirror + submissions writes.
  */
+const USE_SUBMISSIONS_TABLES = false;
 export const saveSubmission = async (type: string, data: any) => {
   const id = data.id || Date.now().toString();
   const payload = {
@@ -124,46 +134,48 @@ export const saveSubmission = async (type: string, data: any) => {
   if (!supabase) {
     console.warn('Supabase not configured (missing VITE_SUPABASE_URL/KEY) — saving locally only.');
   } else {
-    // 1. Try writing to a specific table (e.g., contacts, registrations)
-    const specificTable = 
-      type === 'contact' ? 'contacts' :
-      type === 'registration' ? 'registrations' :
-      type === 'property' ? 'properties' :
-      type === 'job' ? 'jobs' :
-      type === 'application' ? 'applications' :
-      type === 'service_request' ? 'service_requests' : null;
+    if (USE_SUBMISSIONS_TABLES) {
+      // 1. Try writing to a specific table (e.g., contacts, registrations)
+      const specificTable =
+        type === 'contact' ? 'contacts' :
+        type === 'registration' ? 'registrations' :
+        type === 'property' ? 'properties' :
+        type === 'job' ? 'jobs' :
+        type === 'application' ? 'applications' :
+        type === 'service_request' ? 'service_requests' : null;
 
-    if (specificTable) {
+      if (specificTable) {
+        try {
+          const { error: specificErr } = await supabase
+            .from(specificTable)
+            .upsert({
+              id,
+              status: payload.status,
+              data: data,
+              created_at: payload.created_at
+            }, { onConflict: 'id' });
+          
+          if (!specificErr) remoteSaved = true;
+          else if (specificErr.code !== 'PGRST205') {
+            console.warn(`Supabase specific table "${specificTable}" upsert warning:`, specificErr.message);
+          }
+        } catch (e: any) {
+          // Table might not exist, proceed
+        }
+      }
+
+      // 2. Write to the general submissions table (if it exists)
       try {
-        const { error: specificErr } = await supabase
-          .from(specificTable)
-          .upsert({
-            id,
-            status: payload.status,
-            data: data,
-            created_at: payload.created_at
-          }, { onConflict: 'id' });
-        
-        if (!specificErr) remoteSaved = true;
-        else if (specificErr.code !== 'PGRST205') {
-          console.warn(`Supabase specific table "${specificTable}" upsert warning:`, specificErr.message);
+        const { error } = await supabase
+          .from('submissions')
+          .upsert(payload, { onConflict: 'id' });
+        if (!error) remoteSaved = true;
+        else if (error.code !== 'PGRST205') {
+          console.warn('Supabase generic submissions upsert warning:', error.message);
         }
       } catch (e: any) {
-        // Table might not exist, proceed
+        // table missing
       }
-    }
-
-    // 2. Write to the general submissions table (if it exists)
-    try {
-      const { error } = await supabase
-        .from('submissions')
-        .upsert(payload, { onConflict: 'id' });
-      if (!error) remoteSaved = true;
-      else if (error.code !== 'PGRST205') {
-        console.warn('Supabase generic submissions upsert warning:', error.message);
-      }
-    } catch (e: any) {
-      // table missing
     }
 
     // 3. Final fallback — bookings table ALWAYS exists (verified live). Store as booking_type=type
@@ -211,15 +223,17 @@ export const saveSubmission = async (type: string, data: any) => {
  */
 export const removeSubmission = async (id: string) => {
   if (!supabase) return;
-  try {
-    const { error } = await supabase
-      .from('submissions')
-      .delete()
-      .eq('id', id);
-    if (error && error.code !== 'PGRST205') {
-      console.warn('Supabase submissions delete warning:', error.message);
-    }
-  } catch (err: any) {}
+  if (USE_SUBMISSIONS_TABLES) {
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .delete()
+        .eq('id', id);
+      if (error && error.code !== 'PGRST205') {
+        console.warn('Supabase submissions delete warning:', error.message);
+      }
+    } catch (err: any) {}
+  }
   // Also remove bookings fallback row (where saveSubmission stored it)
   try {
     const { error } = await supabase.from('bookings').delete().eq('id', id);
@@ -229,39 +243,80 @@ export const removeSubmission = async (id: string) => {
   }
 };
 
+let submissionsCache: any[] | null = null;
+let submissionsCacheAt = 0;
+const SUBMISSIONS_CACHE_MS = 10000;
 /**
  * Fetch all submissions for the Admin Panel
- * Tries submissions first, falls back to bookings (booking_type not hourly/supplier)
+ * Fallback-only mode: reads directly from bookings to avoid 404 on submissions
+ * Paginated to bypass 1000 limit for large datasets (users) + cached to avoid loop
  */
 export const fetchAllSubmissions = async (): Promise<any[]> => {
   if (!supabase) return [];
-  // 1. Try submissions table (ideal)
-  try {
-    const { data, error } = await supabase
-      .from('submissions')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error && data && data.length) return data;
-    if (error && error.code !== 'PGRST205') {
-      console.warn('Supabase fetch submissions warning:', error.message);
-    }
-  } catch (err: any) {
-    // table missing
+  if(submissionsCache && Date.now() - submissionsCacheAt < SUBMISSIONS_CACHE_MS) return submissionsCache;
+  if (USE_SUBMISSIONS_TABLES) {
+    try {
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data && data.length) {
+        submissionsCache = data; submissionsCacheAt = Date.now();
+        return data;
+      }
+      if (error && error.code !== 'PGRST205') {
+        console.warn('Supabase fetch submissions warning:', error.message);
+      }
+    } catch (err: any) {}
   }
-  // 2. Fallback: read from bookings where booking_type is not the two native booking types
-  // This is where saveSubmission fallback stores data when submissions is missing.
+  try {
+    let all: any[] = [];
+    let from = 0; const step = 1000;
+    while(true){
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from+step-1);
+      if (error) { console.warn('Supabase fetch bookings fallback warning:', error.message); return all; }
+      if(!data||!data.length) break;
+      all = all.concat(data);
+      if(data.length < step) break;
+      from += step;
+    }
+    const filtered = all.filter((r: any) => !['hourly','supplier'].includes(r.booking_type));
+    const res = filtered.map((r: any) => ({
+      id: r.id,
+      type: r.booking_type,
+      status: r.status,
+      data: r.details,
+      created_at: r.created_at,
+    }));
+    submissionsCache = res; submissionsCacheAt = Date.now();
+    return res;
+  } catch (err: any) {
+    console.error('Failed to fetch submissions fallback:', err?.message || err);
+    return [];
+  }
+};
+
+/**
+ * Fetch only chat_message bookings — used by chat polling to avoid fetching 1075 registrations every 4s
+ */
+export const fetchChatMessages = async (): Promise<any[]> => {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
-      .order('created_at', { ascending: false });
+      .eq('booking_type', 'chat_message')
+      .order('created_at', { ascending: false })
+      .limit(200);
     if (error) {
-      console.warn('Supabase fetch bookings fallback warning:', error.message);
+      console.warn('fetchChatMessages warning:', error.message);
       return [];
     }
-    // Map bookings rows back to submissions shape
-    const filtered = (data || []).filter((r: any) => !['hourly','supplier'].includes(r.booking_type));
-    return filtered.map((r: any) => ({
+    return (data || []).map((r: any) => ({
       id: r.id,
       type: r.booking_type,
       status: r.status,
@@ -269,7 +324,7 @@ export const fetchAllSubmissions = async (): Promise<any[]> => {
       created_at: r.created_at,
     }));
   } catch (err: any) {
-    console.error('Failed to fetch submissions fallback:', err?.message || err);
+    console.error('fetchChatMessages failed:', err?.message || err);
     return [];
   }
 };

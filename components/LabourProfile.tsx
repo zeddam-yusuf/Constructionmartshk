@@ -83,7 +83,7 @@ export function LabourProfile() {
     setIsEditing(false);
     await saveProfile({ name, phone, email, category, experience, charges: baseRate ? `₹${baseRate}/day` : undefined });
     const updatedProfile = {
-      id: `labour-profile-ramu`,
+      id: user?.id || `labour-profile-${phone || Date.now()}`,
       fullName: name,
       email: email,
       mobile: phone,

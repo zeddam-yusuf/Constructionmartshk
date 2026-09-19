@@ -17,13 +17,17 @@ export interface RegisterPayload {
   phone: string;
   role: string;
   password: string;
-  email?: string;
-  city?: string;
-  companyName?: string;
   category?: string;
+  subCategory?: string;
+  state?: string;
+  city?: string;
+  remarks?: string;
   experience?: string;
-  charges?: string;
   gstNumber?: string;
+  charges?: string;
+  email?: string;
+  // deprecated alias
+  companyName?: string;
 }
 
 const TOKEN_KEY = 'cm_token';
@@ -73,18 +77,20 @@ export const seedPlatform = async (): Promise<void> => {
 
   // Seed one demo account per role (password: demo123) for easy testing.
   const demos: Omit<StoredUser, 'password_hash'>[] = [
-    { id: 'sample-client-1', name: 'Arjun Mehta (Developer)', phone: '9000000001', role: 'CLIENT', status: 'active', city: 'Mumbai', companyName: 'Mehta Constructions', email: 'arjun@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-vendor-1', name: 'Suresh Gupta (Vendor)', phone: '9000000002', role: 'VENDOR', status: 'active', city: 'Pune', companyName: 'Gupta Builders', email: 'suresh@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-pmc-1', name: 'Anita Desai (PMC)', phone: '9000000003', role: 'PMC', status: 'active', city: 'Bangalore', companyName: 'Desai PMC', email: 'anita@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-partner-1', name: 'Vikram Singh (Channel Partner)', phone: '9000000004', role: 'CHANNEL_PARTNER', status: 'active', city: 'Delhi', companyName: 'Singh Referrals', email: 'vikram@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-labour-1', name: 'Ramesh Yadav (Labour)', phone: '9000000005', role: 'LABOUR', status: 'active', city: 'Noida', experience: '10+ years', charges: '₹700 / day', email: 'ramesh@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-supplier-1', name: 'Pooja Mehta (Material Supplier)', phone: '9000000006', role: 'MATERIAL_SUPPLIER', status: 'active', city: 'Chennai', companyName: 'Mehta Traders', category: 'Cement, Steel, Sand', email: 'pooja@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-job-1', name: 'Farhan Khan (Job / Engineer)', phone: '9000000007', role: 'JOB', status: 'active', city: 'Hyderabad', companyName: 'Khan Engineering', experience: 'Site Engineer', email: 'farhan@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-freelancer-1', name: 'Neha Sharma (Freelancer)', phone: '9000000008', role: 'FREELANCER', status: 'active', city: 'Gurgaon', charges: '₹2,000 / day', email: 'neha@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-broker-1', name: 'Sanjay Rao (Broker)', phone: '9000000009', role: 'BROKER', status: 'active', city: 'Mumbai', companyName: 'Rao Realty', email: 'sanjay@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-client-1', name: 'Arjun Mehta (Developer)', phone: '9000000001', role: 'CLIENT', category: 'Residential', subCategory: 'Mehta Constructions', state: 'Maharashtra', city: 'Mumbai', remarks: 'Demo client', status: 'active', email: 'arjun@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-vendor-1', name: 'Suresh Gupta (Vendor)', phone: '9000000002', role: 'VENDOR', category: 'Civil Work', subCategory: 'Gupta Builders', state: 'Maharashtra', city: 'Pune', remarks: 'Demo vendor', status: 'active', email: 'suresh@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-pmc-1', name: 'Anita Desai (PMC)', phone: '9000000003', role: 'PMC', category: 'Project Management', subCategory: 'Desai PMC', state: 'Karnataka', city: 'Bangalore', remarks: 'Demo PMC', status: 'active', email: 'anita@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-partner-1', name: 'Vikram Singh (Channel Partner)', phone: '9000000004', role: 'CHANNEL_PARTNER', category: 'Channel Partner', subCategory: 'Singh Referrals', state: 'Delhi', city: 'Delhi', remarks: 'Demo partner', status: 'active', email: 'vikram@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-labour-1', name: 'Ramesh Yadav (Labour)', phone: '9000000005', role: 'LABOUR', category: 'Mason', state: 'Uttar Pradesh', city: 'Noida', remarks: 'Demo labour', experience: '10+ years', charges: '₹700 / day', status: 'active', email: 'ramesh@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-supplier-1', name: 'Pooja Mehta (Material Supplier)', phone: '9000000006', role: 'MATERIAL_SUPPLIER', category: 'Cement, Steel, Sand', subCategory: 'Mehta Traders', state: 'Tamil Nadu', city: 'Chennai', remarks: 'Demo supplier', status: 'active', email: 'pooja@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-job-1', name: 'Farhan Khan (Job Seeker / Engineer)', phone: '9000000007', role: 'JOB SEEKER', category: 'Site Engineer', subCategory: 'Khan Engineering', state: 'Telangana', city: 'Hyderabad', remarks: 'Demo job', experience: 'Site Engineer', status: 'active', email: 'farhan@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-freelancer-1', name: 'Neha Sharma (Freelancer)', phone: '9000000008', role: 'FREELANCER', category: 'Design', state: 'Haryana', city: 'Gurgaon', remarks: 'Demo freelancer', charges: '₹2,000 / day', status: 'active', email: 'neha@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-broker-1', name: 'Sanjay Rao (Broker)', phone: '9000000009', role: 'BROKER', category: 'Real Estate', subCategory: 'Rao Realty', state: 'Maharashtra', city: 'Mumbai', remarks: 'Demo broker', status: 'active', email: 'sanjay@example.com', created_at: new Date().toISOString() },
   ];
   const { salt: demoSalt, hash: demoHash } = await hashPassword('demo123');
   const all = await dbListUsers();
+  // Skip demo seeding when real dataset is present (e.g., after bulk import) to avoid re-creating deleted samples
+  if (all.length > 50) return;
   for (const demo of demos) {
     if (all.some((u) => u.phone === demo.phone)) continue;
     await dbUpsertUser({ ...demo, password_hash: `${demoSalt}:${demoHash}` });
@@ -118,17 +124,19 @@ export const registerUser = async (payload: RegisterPayload): Promise<{ user: Au
   const user: StoredUser = {
     id: crypto.randomUUID(),
     name: String(name).trim(),
-    phone: cleanPhone,
     role,
-    password_hash: `${salt}:${hash}`,
-    status: 'active',
-    email: payload.email || undefined,
-    city: payload.city || undefined,
-    companyName: payload.companyName || undefined,
     category: payload.category || undefined,
+    password_hash: `${salt}:${hash}`,
+    subCategory: payload.subCategory || payload.companyName || undefined,
+    state: payload.state || undefined,
+    city: payload.city || undefined,
+    remarks: payload.remarks || undefined,
     experience: payload.experience || undefined,
-    charges: payload.charges || undefined,
     gstNumber: payload.gstNumber || undefined,
+    charges: payload.charges || undefined,
+    email: payload.email || undefined,
+    status: 'active',
+    phone: cleanPhone,
     created_at: new Date().toISOString(),
   };
 

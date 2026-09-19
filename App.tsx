@@ -18,7 +18,7 @@ import { SupplierProfile } from './components/SupplierProfile';
 import { JobProfile } from './components/JobProfile';
 import { VendorProfile } from './components/VendorProfile';
 import SupplierDashboard from './components/SupplierDashboard';
-import { fetchAllBookings, saveBooking, saveSubmission, fetchAllSubmissions } from './services/supabase';
+import { fetchAllBookings, saveBooking, saveSubmission, fetchAllSubmissions, fetchChatMessages } from './services/supabase';
 import { listLocalWorkRequests, WorkRequest } from './components/RequestsBoard';
 import { useAuth } from './services/auth';
 import { AuthScreen } from './components/AuthScreen';
@@ -1534,11 +1534,11 @@ const App: React.FC = () => {
     return INITIAL_MESSAGES;
   });
 
-  // Load chat history from database (Supabase submissions via bookings fallback) and keep in sync
+  // Load chat history from database — use dedicated chat query to avoid fetching 1075 users every 4s
   useEffect(() => {
     const loadRemoteChat = async () => {
       try {
-        const submissions = await fetchAllSubmissions();
+        const submissions = await fetchChatMessages();
         const remoteChats = submissions
           .filter((s: any) => s.type === 'chat_message' && s.data)
           .map((s: any) => s.data as ChatMessage);

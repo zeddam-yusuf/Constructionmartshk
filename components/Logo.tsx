@@ -8,8 +8,10 @@ export interface LogoProps {
   useImage?: boolean;
 }
 
-export const LOGO_IMAGE_PATH = '/src/assets/images/mart_shk_logo_1786037257187.jpg';
-export const LOGO_ICON_PATH = '/src/assets/images/mart_shk_icon_1786037271469.jpg';
+export const LOGO_IMAGE_PATH = '/src/assets/images/logo_new.png';
+// export const LOGO_IMAGE_PATH = '/src/assets/images/mart_shk_logo_1786037257187.jpg';
+// export const LOGO_ICON_PATH = '/src/assets/images/mart_shk_icon_1786037271469.jpg';
+export const LOGO_ICON_PATH = '/src/assets/images/logo_new.png';
 
 export const Logo: React.FC<LogoProps> = ({
   size = 'md',

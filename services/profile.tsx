@@ -14,16 +14,26 @@ export const useProfile = () => {
     async (patch: {
       name?: string;
       phone?: string;
-      email?: string;
-      city?: string;
-      companyName?: string;
+      role?: string;
       category?: string;
+      subCategory?: string;
+      state?: string;
+      city?: string;
+      remarks?: string;
       experience?: string;
-      charges?: string;
       gstNumber?: string;
+      charges?: string;
+      email?: string;
+      status?: string;
+      companyName?: string;
     }) => {
       if (!user) return;
-      await dbUpdateUser(user.id, patch);
+      // map deprecated companyName -> subCategory for backwards compat
+      const normalized: any = { ...patch };
+      if (normalized.companyName && !normalized.subCategory) {
+        normalized.subCategory = normalized.companyName;
+      }
+      await dbUpdateUser(user.id, normalized);
       await refreshUser();
     },
     [user, refreshUser]
