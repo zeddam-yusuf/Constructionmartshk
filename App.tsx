@@ -4292,12 +4292,24 @@ const App: React.FC = () => {
                 Vendor: 'Labours',
                 'Property Agents': 'Staff',
               };
+              const serviceTypeMap: Record<string, ServiceType> = {
+                Material: ServiceType.CONSTRUCTION,
+                Labour: ServiceType.CONSTRUCTION,
+                Engineer: ServiceType.CONSTRUCTION,
+                PMC: ServiceType.CONSTRUCTION,
+                Consultant: ServiceType.CONSTRUCTION,
+                Architect: ServiceType.INTERIOR,
+                Freelancer: ServiceType.INTERIOR,
+                Vendor: ServiceType.CONSTRUCTION,
+                'Property Agents': ServiceType.HOME,
+              };
+              const reqCat = req.requirementCategory || 'Vendor';
               setClientReqs((prev) => [
                 {
                   id: req.id,
-                  title: req.title || `${req.requirementCategory || 'Project'} Requirement`,
-                  category: req.requirementCategory || 'General',
-                  reqCategory: reqCatMap[req.requirementCategory || 'Vendor'] || 'Labours',
+                  title: req.title || `${reqCat} Requirement`,
+                  category: serviceTypeMap[reqCat] || ServiceType.CONSTRUCTION,
+                  reqCategory: reqCatMap[reqCat] || 'Labours',
                   requesterType: currentRole === UserRole.VENDOR ? 'Contractor' : 'Client',
                   budget: req.paymentPerDay || 'As per quote',
                   location: req.location || 'Mumbai',
