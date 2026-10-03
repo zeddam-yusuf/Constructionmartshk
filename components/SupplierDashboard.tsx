@@ -224,7 +224,7 @@ export default function SupplierDashboard() {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    ⚡ Instant Yard Labour Booking Hub
+                    ⚡ Instant Yard Labour (Labour Naka) Booking Hub
                     <span className="bg-orange-100 text-orange-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Direct & Verified</span>
                   </h3>
                   <p className="text-xs text-gray-500 font-medium mt-0.5">Book certified heavy loaders and stacking helpers for material dispatch, yard loading, and deliveries.</p>

@@ -301,7 +301,7 @@ export function ClientProfile() {
                   <ul className="space-y-1.5 text-xs text-gray-600">
                     <li className="flex justify-between"><span>Active Projects:</span> <span className="font-bold text-gray-900">3 Live</span></li>
                     <li className="flex justify-between"><span>Completed Castings:</span> <span className="font-bold text-gray-900">5 Finished</span></li>
-                    <li className="flex justify-between"><span>Instant Labours Booked:</span> <span className="font-bold text-gray-900">12 Workers</span></li>
+                    <li className="flex justify-between"><span>Instant Labour (Labour Naka) Booked:</span> <span className="font-bold text-gray-900">12 Workers</span></li>
                   </ul>
                 </div>
 

@@ -16,6 +16,34 @@ import {
 
 // ---------- Data model ----------
 
+export type RequirementCategory =
+  | 'Vendor'
+  | 'Material'
+  | 'Engineer'
+  | 'PMC'
+  | 'Consultant'
+  | 'Architect'
+  | 'Property Agents'
+  | 'Freelancer'
+  | 'Labour';
+
+export const MAIN_REQUIREMENT_CATEGORIES: {
+  key: RequirementCategory;
+  label: string;
+  desc: string;
+  badgeCls: string;
+}[] = [
+  { key: 'Vendor', label: 'Vendor', desc: 'Civil, Interior, MEP & Turnkey Contractors', badgeCls: 'bg-orange-100 text-orange-800 border-orange-200' },
+  { key: 'Material', label: 'Material', desc: 'Cement, Steel, Sand, Bricks, Tiles & Supplies', badgeCls: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { key: 'Engineer', label: 'Engineer', desc: 'Site, Civil, Structural, Billing & Safety Engineers', badgeCls: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { key: 'PMC', label: 'PMC', desc: 'Project Management & Site Quality Auditing', badgeCls: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+  { key: 'Consultant', label: 'Consultant', desc: 'Structural, MEP, RERA & Cost Consultants', badgeCls: 'bg-purple-100 text-purple-800 border-purple-200' },
+  { key: 'Architect', label: 'Architect', desc: 'Architectural Plans, Interior & 3D Design', badgeCls: 'bg-pink-100 text-pink-800 border-pink-200' },
+  { key: 'Property Agents', label: 'Property Agents', desc: 'Real Estate Brokers, Land & Project Mandates', badgeCls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { key: 'Freelancer', label: 'Freelancer', desc: 'AutoCAD, 3D Visualizer, Surveyor & Estimator', badgeCls: 'bg-teal-100 text-teal-800 border-teal-200' },
+  { key: 'Labour', label: 'Instant Labour (Labour Naka)', desc: 'Masons, Carpenters, Electricians & Site Crew', badgeCls: 'bg-slate-100 text-slate-800 border-slate-200' },
+];
+
 export interface WorkerRequirement {
   profession: string;
   count: number;
@@ -24,6 +52,7 @@ export interface WorkerRequirement {
 export interface WorkRequest {
   id: string;
   kind: 'project' | 'available';
+  requirementCategory?: RequirementCategory;
   userId: string;
   userName: string;
   userPhone: string;
@@ -62,6 +91,13 @@ export const CIVIL_PROFESSIONS = [
   'Waterproofing Applicator',
   'Helper / Mazdoor',
   'Supervisor / Site Engineer',
+  'Civil / Turnkey Vendor',
+  'Material Supplier',
+  'Project Management Consultant (PMC)',
+  'Structural / MEP Consultant',
+  'Architect / Interior Designer',
+  'Property Agent / Real Estate Broker',
+  'Freelance CAD / 3D / Estimator',
 ];
 
 // ---------- Storage (localStorage first, Supabase mirror) ----------
@@ -168,9 +204,10 @@ export const ROLE_LABELS: Record<string, string> = {
 
 // ---------- Requests view (board) ----------
 
-export const RequestsView = ({ mode }: { mode: 'all' | 'project' | 'available' }) => {
+export const RequestsView = ({ mode, onPostVacancy }: { mode: 'all' | 'project' | 'available'; onPostVacancy?: () => void }) => {
   const [requests, setRequests] = useState<WorkRequest[]>([]);
   const [filter, setFilter] = useState<'all' | 'project' | 'available'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'All' | RequirementCategory>('All');
   const [loading, setLoading] = useState(true);
 
   const loadRequests = async () => {
@@ -202,45 +239,79 @@ export const RequestsView = ({ mode }: { mode: 'all' | 'project' | 'available' }
 
   const effectiveMode = mode === 'all' ? filter : mode;
   const visible = useMemo(
-    () => requests.filter((r) => (effectiveMode === 'all' ? true : r.kind === effectiveMode)),
-    [requests, effectiveMode]
+    () =>
+      requests.filter((r) => {
+        const kindOk = effectiveMode === 'all' ? true : r.kind === effectiveMode;
+        const cat = r.requirementCategory || 'Labour';
+        const catOk = categoryFilter === 'All' ? true : cat === categoryFilter;
+        return kindOk && catOk;
+      }),
+    [requests, effectiveMode, categoryFilter]
   );
 
   const title =
-    mode === 'available' ? 'Find Labour'
-    : mode === 'project' ? 'Find Project'
-    : 'Find';
+    mode === 'available' ? 'Find Instant Labour (Labour Naka)'
+    : mode === 'project' ? 'Find Project & Vacancies'
+    : 'Find & Vacancies';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {mode === 'available'
-            ? 'Skilled workers and teams available for hire right now.'
-            : mode === 'project'
-            ? 'Work projects posted by developers, contractors and consultants.'
-            : 'All requests posted by users - latest first.'}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {mode === 'available'
+              ? 'Instant Labour (Labour Naka) and skilled workers available for hire right now.'
+              : mode === 'project'
+              ? 'Work projects and vacancies posted by developers, contractors and consultants.'
+              : 'All requests and vacancies posted by users - latest first.'}
+          </p>
+        </div>
+        {onPostVacancy && (
+          <button
+            onClick={onPostVacancy}
+            className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
+          >
+            + Post Vacancy
+          </button>
+        )}
       </div>
 
       {mode === 'all' && (
-        <div className="flex flex-wrap gap-2">
-          {([
-            { key: 'all', label: 'All Requests', icon: ClipboardList },
-            { key: 'project', label: 'Work Projects', icon: Briefcase },
-            { key: 'available', label: 'Available for Work', icon: HardHat },
-          ] as const).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                filter === key ? 'bg-orange-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
-              }`}
-            >
-              <Icon size={14} /> {label}
-            </button>
-          ))}
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { key: 'all', label: 'All Requests', icon: ClipboardList },
+              { key: 'project', label: 'Work Projects / Requirements', icon: Briefcase },
+              { key: 'available', label: 'Instant Labour (Labour Naka)', icon: HardHat },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  filter === key ? 'bg-orange-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
+                }`}
+              >
+                <Icon size={14} /> {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {(['All', ...MAIN_REQUIREMENT_CATEGORIES.map((c) => c.key)] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                  categoryFilter === cat
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {cat === 'All' ? 'All Categories' : cat}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -249,7 +320,7 @@ export const RequestsView = ({ mode }: { mode: 'all' | 'project' | 'available' }
       ) : visible.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
           <ClipboardList size={36} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-sm font-semibold text-gray-500">No requests yet. Be the first to post one.</p>
+          <p className="text-sm font-semibold text-gray-500">No requests yet. Click + Post Vacancy to be the first to post.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -266,14 +337,22 @@ export const RequestsView = ({ mode }: { mode: 'all' | 'project' | 'available' }
 
 const RequestCard = ({ req }: { req: WorkRequest }) => {
   const isProject = req.kind === 'project';
+  const catMeta = MAIN_REQUIREMENT_CATEGORIES.find((c) => c.key === (req.requirementCategory || 'Labour'));
   return (
     <div className={`rounded-2xl p-5 space-y-3 bg-white shadow-sm hover:shadow-md transition-shadow border-t-4 ${isProject ? 'border-t-orange-400' : 'border-t-blue-400'} border-x border-b border-gray-100`}>
       <div className="flex items-start justify-between gap-3">
-        <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-          isProject ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-        }`}>
-          {isProject ? <><Briefcase size={11} /> Work Project</> : <><HardHat size={11} /> Available for Work</>}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+            isProject ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+          }`}>
+            {isProject ? <><Briefcase size={11} /> Requirement</> : <><HardHat size={11} /> Available for Work</>}
+          </span>
+          {catMeta && (
+            <span className={`inline-flex items-center text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${catMeta.badgeCls}`}>
+              {catMeta.label}
+            </span>
+          )}
+        </div>
         <span className="text-[11px] text-gray-400 font-semibold whitespace-nowrap">{timeAgo(req.created_at)}</span>
       </div>
 

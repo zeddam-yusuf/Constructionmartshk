@@ -107,7 +107,7 @@ export const MyPosting = () => {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search title, location..." className="pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-64" />
           </div>
           <button onClick={() => setShowPost(true)} className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm font-bold shadow-sm whitespace-nowrap">
-            <Plus size={16} /> Post Request
+            + Post Vacancy
           </button>
         </div>
       </div>
@@ -128,7 +128,7 @@ export const MyPosting = () => {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">No postings yet. Use Find → Post Request to create one.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">No postings yet. Use + Post Vacancy to create one.</td></tr>
               ) : filtered.map((r) => {
                 const appsCount = applications.filter((a) => a.requestId === r.id).length;
                 const isProject = r.kind === 'project';
@@ -136,7 +136,13 @@ export const MyPosting = () => {
                 return (
                   <tr key={r.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-orange-50' : ''}`}>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600">{new Date(r.created_at).toLocaleDateString()} <span className="text-[10px] text-gray-400 block">{timeAgo(r.created_at)}</span></td>
-                    <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${isProject ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{isProject ? <><Briefcase size={10} /> Project</> : <><HardHat size={10} /> Available</>}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${isProject ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {isProject ? <><Briefcase size={10} /> {r.requirementCategory || 'Project'}</> : <><HardHat size={10} /> Available</>}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 max-w-[260px]"><span className="font-bold text-gray-900 line-clamp-1">{r.title || (r.professions || []).slice(0,2).join(', ') || '-'}</span><span className="text-[11px] text-gray-500 block truncate">{r.workers ? r.workers.map((w) => `${w.count} ${w.profession}`).join(', ') : (r.professions || []).join(', ')}</span></td>
                     <td className="px-4 py-3 text-xs text-gray-600 max-w-[150px] truncate"><span className="inline-flex items-center gap-1"><MapPin size={11} className="text-gray-400" />{r.location || '-'}</span></td>
                     <td className="px-4 py-3 text-xs font-semibold text-gray-800">{r.paymentPerDay || r.costPerDay || '-'}</td>

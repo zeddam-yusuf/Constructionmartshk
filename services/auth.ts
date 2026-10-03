@@ -17,17 +17,13 @@ export interface RegisterPayload {
   phone: string;
   role: string;
   password: string;
-  category?: string;
-  subCategory?: string;
-  state?: string;
-  city?: string;
-  remarks?: string;
-  experience?: string;
-  gstNumber?: string;
-  charges?: string;
   email?: string;
-  // deprecated alias
+  city?: string;
   companyName?: string;
+  category?: string;
+  experience?: string;
+  charges?: string;
+  gstNumber?: string;
 }
 
 const TOKEN_KEY = 'cm_token';
@@ -77,20 +73,23 @@ export const seedPlatform = async (): Promise<void> => {
 
   // Seed one demo account per role (password: demo123) for easy testing.
   const demos: Omit<StoredUser, 'password_hash'>[] = [
-    { id: 'sample-client-1', name: 'Arjun Mehta (Developer)', phone: '9000000001', role: 'CLIENT', category: 'Residential', subCategory: 'Mehta Constructions', state: 'Maharashtra', city: 'Mumbai', remarks: 'Demo client', status: 'active', email: 'arjun@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-vendor-1', name: 'Suresh Gupta (Vendor)', phone: '9000000002', role: 'VENDOR', category: 'Civil Work', subCategory: 'Gupta Builders', state: 'Maharashtra', city: 'Pune', remarks: 'Demo vendor', status: 'active', email: 'suresh@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-pmc-1', name: 'Anita Desai (PMC)', phone: '9000000003', role: 'PMC', category: 'Project Management', subCategory: 'Desai PMC', state: 'Karnataka', city: 'Bangalore', remarks: 'Demo PMC', status: 'active', email: 'anita@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-partner-1', name: 'Vikram Singh (Channel Partner)', phone: '9000000004', role: 'CHANNEL_PARTNER', category: 'Channel Partner', subCategory: 'Singh Referrals', state: 'Delhi', city: 'Delhi', remarks: 'Demo partner', status: 'active', email: 'vikram@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-labour-1', name: 'Ramesh Yadav (Labour)', phone: '9000000005', role: 'LABOUR', category: 'Mason', state: 'Uttar Pradesh', city: 'Noida', remarks: 'Demo labour', experience: '10+ years', charges: '₹700 / day', status: 'active', email: 'ramesh@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-supplier-1', name: 'Pooja Mehta (Material Supplier)', phone: '9000000006', role: 'MATERIAL_SUPPLIER', category: 'Cement, Steel, Sand', subCategory: 'Mehta Traders', state: 'Tamil Nadu', city: 'Chennai', remarks: 'Demo supplier', status: 'active', email: 'pooja@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-job-1', name: 'Farhan Khan (Job Seeker / Engineer)', phone: '9000000007', role: 'JOB SEEKER', category: 'Site Engineer', subCategory: 'Khan Engineering', state: 'Telangana', city: 'Hyderabad', remarks: 'Demo job', experience: 'Site Engineer', status: 'active', email: 'farhan@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-freelancer-1', name: 'Neha Sharma (Freelancer)', phone: '9000000008', role: 'FREELANCER', category: 'Design', state: 'Haryana', city: 'Gurgaon', remarks: 'Demo freelancer', charges: '₹2,000 / day', status: 'active', email: 'neha@example.com', created_at: new Date().toISOString() },
-    { id: 'sample-broker-1', name: 'Sanjay Rao (Broker)', phone: '9000000009', role: 'BROKER', category: 'Real Estate', subCategory: 'Rao Realty', state: 'Maharashtra', city: 'Mumbai', remarks: 'Demo broker', status: 'active', email: 'sanjay@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-client-1', name: 'Arjun Mehta (Developer)', phone: '9000000001', role: 'CLIENT', status: 'active', city: 'Mumbai', companyName: 'Mehta Constructions', email: 'arjun@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-vendor-1', name: 'Suresh Gupta (Vendor)', phone: '9000000002', role: 'VENDOR', status: 'active', city: 'Pune', companyName: 'Gupta Builders', email: 'suresh@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-pmc-1', name: 'Anita Desai (PMC)', phone: '9000000003', role: 'PMC', status: 'active', city: 'Bangalore', companyName: 'Desai PMC', email: 'anita@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-partner-1', name: 'Vikram Singh (Channel Partner)', phone: '9000000004', role: 'CHANNEL_PARTNER', status: 'active', city: 'Delhi', companyName: 'Singh Referrals', email: 'vikram@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-labour-1', name: 'Ramesh Yadav (Labour)', phone: '9000000005', role: 'LABOUR', status: 'active', city: 'Noida', experience: '10+ years', charges: '₹700 / day', email: 'ramesh@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-supplier-1', name: 'Pooja Mehta (Material Supplier)', phone: '9000000006', role: 'MATERIAL_SUPPLIER', status: 'active', city: 'Chennai', companyName: 'Mehta Traders', category: 'Cement, Steel, Sand', email: 'pooja@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-job-1', name: 'Farhan Khan (Construction & Engineering Staff)', phone: '9000000007', role: 'JOB', status: 'active', city: 'Hyderabad', companyName: 'Khan Engineering', experience: 'Civil Site Engineer', email: 'farhan@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-freelancer-1', name: 'Neha Sharma (Freelancer)', phone: '9000000008', role: 'FREELANCER', status: 'active', city: 'Gurgaon', charges: '₹2,000 / day', email: 'neha@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-broker-1', name: 'Sanjay Rao (Broker)', phone: '9000000009', role: 'BROKER', status: 'active', city: 'Mumbai', companyName: 'Rao Realty', email: 'sanjay@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-architect-1', name: 'Kavita Verma (Architect)', phone: '9000000010', role: 'ARCHITECT', status: 'active', city: 'Mumbai', companyName: 'Studio Verma Architects', category: 'Architectural Design & Planning', email: 'kavita@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-rmc-1', name: 'UltraMix Concrete (RMC)', phone: '9000000011', role: 'RMC', status: 'active', city: 'Pune', companyName: 'UltraMix RMC Ready-Mix Concrete', category: 'Ready-Mix Concrete / Batching Plant', email: 'ultramix@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-consultant-1', name: 'Dr. Rajesh Kulkarni (Consultant)', phone: '9000000012', role: 'CONSULTANT', status: 'active', city: 'Bangalore', companyName: 'Kulkarni Structural Advisory', category: 'Civil & Structural Consultant', email: 'kulkarni@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-factory-1', name: 'Bharat Precast & AAC (Construction Factory)', phone: '9000000013', role: 'CONSTRUCTION_FACTORY', status: 'active', city: 'Nagpur', companyName: 'Bharat Precast & AAC Blocks Ltd', category: 'Precast Panels, AAC Blocks & Building Materials', email: 'bharatfactory@example.com', created_at: new Date().toISOString() },
+    { id: 'sample-mep-1', name: 'Rohan Sharma (MEP Staff & Supervisor)', phone: '9000000014', role: 'MEP', status: 'active', city: 'Mumbai', companyName: 'Apex MEP Engineering Solutions', category: 'Mechanical, Electrical & Plumbing Staff / Supervisor / Labour', email: 'rohan.mep@example.com', created_at: new Date().toISOString() },
   ];
   const { salt: demoSalt, hash: demoHash } = await hashPassword('demo123');
   const all = await dbListUsers();
-  // Skip demo seeding when real dataset is present (e.g., after bulk import) to avoid re-creating deleted samples
-  if (all.length > 50) return;
   for (const demo of demos) {
     if (all.some((u) => u.phone === demo.phone)) continue;
     await dbUpsertUser({ ...demo, password_hash: `${demoSalt}:${demoHash}` });
@@ -124,19 +123,17 @@ export const registerUser = async (payload: RegisterPayload): Promise<{ user: Au
   const user: StoredUser = {
     id: crypto.randomUUID(),
     name: String(name).trim(),
-    role,
-    category: payload.category || undefined,
-    password_hash: `${salt}:${hash}`,
-    subCategory: payload.subCategory || payload.companyName || undefined,
-    state: payload.state || undefined,
-    city: payload.city || undefined,
-    remarks: payload.remarks || undefined,
-    experience: payload.experience || undefined,
-    gstNumber: payload.gstNumber || undefined,
-    charges: payload.charges || undefined,
-    email: payload.email || undefined,
-    status: 'active',
     phone: cleanPhone,
+    role,
+    password_hash: `${salt}:${hash}`,
+    status: 'active',
+    email: payload.email || undefined,
+    city: payload.city || undefined,
+    companyName: payload.companyName || undefined,
+    category: payload.category || undefined,
+    experience: payload.experience || undefined,
+    charges: payload.charges || undefined,
+    gstNumber: payload.gstNumber || undefined,
     created_at: new Date().toISOString(),
   };
 
@@ -180,9 +177,12 @@ export const fetchCurrentUser = async (token?: string): Promise<AuthUser> => {
 type Listener = () => void;
 
 let state: { user: AuthUser | null; ready: boolean } = {
-  user: getStoredUser(),
-  ready: false,
+  user: getToken() ? getStoredUser() : null,
+  ready: true,
 };
+
+let bootstrapStarted = false;
+let sessionVersion = 0;
 
 const listeners = new Set<Listener>();
 
@@ -202,46 +202,41 @@ export const useAuth = () => {
   const snapshot = useSyncExternalStore(subscribe, getAuthState, getAuthState);
 
   useEffect(() => {
+    if (bootstrapStarted) return;
+    bootstrapStarted = true;
+    const myVersion = sessionVersion;
+
     (async () => {
       try {
         await seedPlatform();
       } catch (e) {
         // seeding failures (e.g. blocked storage) should not block the app
       }
+      if (myVersion !== sessionVersion) return;
+
       const token = getToken();
       const stored = getStoredUser();
       if (token && stored) {
-        // Already bootstrapped and ready (e.g. another useAuth consumer like a profile
-        // page mounted mid-session) — silently re-validate WITHOUT toggling `ready`.
-        // Flipping ready here would unmount the whole tree via the loading gate and
-        // cause an infinite mount/unmount loop.
-        if (state.ready && state.user) {
-          try {
-            const fresh = await fetchCurrentUser(token);
-            storeUser(fresh);
-            setState({ user: fresh, ready: true });
-          } catch (err) {
-            setState({ ready: true });
-          }
-          return;
-        }
-        setState({ user: stored, ready: false });
         try {
           const fresh = await fetchCurrentUser(token);
+          if (myVersion !== sessionVersion || !getToken()) return;
           storeUser(fresh);
           setState({ user: fresh, ready: true });
         } catch (err) {
-          // Invalid/expired token or storage unavailable; keep cached user so UI still opens.
+          if (myVersion !== sessionVersion) return;
+          // Keep cached user if still logged in so UI stays open
           setState({ ready: true });
         }
-      } else {
-        setState({ ready: true });
+      } else if (myVersion === sessionVersion) {
+        clearToken();
+        setState({ user: null, ready: true });
       }
     })();
   }, []);
 
   const login = useCallback(async (phone: string, password: string) => {
     const { token, user } = await loginUser(phone, password);
+    sessionVersion += 1;
     setToken(token);
     storeUser(user);
     setState({ user, ready: true });
@@ -250,6 +245,7 @@ export const useAuth = () => {
 
   const register = useCallback(async (payload: RegisterPayload) => {
     const { token, user } = await registerUser(payload);
+    sessionVersion += 1;
     setToken(token);
     storeUser(user);
     setState({ user, ready: true });
@@ -257,13 +253,17 @@ export const useAuth = () => {
   }, []);
 
   const logout = useCallback(() => {
+    sessionVersion += 1;
     clearToken();
     setState({ user: null, ready: true });
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (getToken() && getStoredUser()) {
-      const fresh = await fetchCurrentUser();
+    const myVersion = sessionVersion;
+    const token = getToken();
+    if (token && getStoredUser()) {
+      const fresh = await fetchCurrentUser(token);
+      if (myVersion !== sessionVersion || !getToken()) return;
       storeUser(fresh);
       setState({ user: fresh });
     }

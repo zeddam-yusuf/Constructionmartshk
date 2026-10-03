@@ -9,6 +9,11 @@ export enum UserRole {
   JOB_SEEKER = 'JOB SEEKER',
   FREELANCER = 'FREELANCER',
   BROKER = 'BROKER',
+  ARCHITECT = 'ARCHITECT',
+  RMC = 'RMC',
+  CONSULTANT = 'CONSULTANT',
+  CONSTRUCTION_FACTORY = 'CONSTRUCTION_FACTORY',
+  MEP = 'MEP',
 }
 
 export enum ServiceType {

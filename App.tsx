@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, ServiceType, Project, WhatsappContact, PaymentStatus, ChatMessage, Vendor, Client, ChannelPartner, ActivityRate, MaterialRate } from './types';
 import Dashboard from './components/Dashboard';
 import AIAssistant from './components/AIAssistant';
@@ -18,8 +18,8 @@ import { SupplierProfile } from './components/SupplierProfile';
 import { JobProfile } from './components/JobProfile';
 import { VendorProfile } from './components/VendorProfile';
 import SupplierDashboard from './components/SupplierDashboard';
-import { fetchAllBookings, saveBooking, saveSubmission, fetchAllSubmissions, fetchChatMessages } from './services/supabase';
-import { listLocalWorkRequests, WorkRequest } from './components/RequestsBoard';
+import { fetchAllBookings, saveBooking, saveSubmission, fetchAllSubmissions } from './services/supabase';
+import { listLocalWorkRequests, WorkRequest, RequirementCategory, MAIN_REQUIREMENT_CATEGORIES } from './components/RequestsBoard';
 import { useAuth } from './services/auth';
 import { AuthScreen } from './components/AuthScreen';
 import { SuperAdminPanel } from './components/SuperAdminPanel';
@@ -31,13 +31,19 @@ import jobSymbolImg from './src/assets/images/job_symbol_1785094488725.jpg';
 import freelancerSymbolImg from './src/assets/images/freelancer_symbol_1785171686295.jpg';
 import pmcSymbolImg from './src/assets/images/pmc_symbol_1785866168151.jpg';
 import brokerSymbolImg from './src/assets/images/broker_symbol_1785866178809.jpg';
+import architectSymbolImg from './src/assets/images/architect_symbol_1790965373365.jpg';
+import rmcSymbolImg from './src/assets/images/rmc_symbol_1790965385502.jpg';
+import consultantSymbolImg from './src/assets/images/consultant_symbol_1790965398851.jpg';
+import materialSymbolImg from './src/assets/images/material_symbol_1790965413299.jpg';
+import factorySymbolImg from './src/assets/images/factory_symbol_1790966263406.jpg';
+import mepSymbolImg from './src/assets/images/mep_symbol_1791044860644.jpg';
 import { FreelancerProfile } from './components/FreelancerProfile';
 import { PMCProfile } from './components/PMCProfile';
 import { BrokerProfile } from './components/BrokerProfile';
 import { RequestsView } from './components/RequestsBoard';
 import { PostRequestModal } from './components/PostRequestModal';
 import { MyPosting } from './components/MyPosting';
-import Logo from './components/Logo';
+import Logo, { LOGO_IMAGE_PATH } from './components/Logo';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -81,7 +87,17 @@ import {
   HardHat,
   FileText,
   Briefcase,
-  Loader2
+  Loader2,
+  Compass,
+  Truck,
+  FileCheck2,
+  ShieldCheck,
+  GraduationCap,
+  Sparkles,
+  Home,
+  Share2,
+  Factory,
+  Wrench
 } from 'lucide-react';
 
 // --- MOCK DATA ---
@@ -625,6 +641,59 @@ const DETAILED_SERVICES = [
       "Industrial Logistics & Land Parcels", "RERA Brokerage Payout Calculator", "Developer Direct Mandates",
       "Escrow Protected Settlements", "High-Yield Retail Shops"
     ]
+  },
+  {
+    category: "Architect & Design Studio",
+    items: [
+      "2D AutoCAD Floor Plans", "Municipal Sanction Drawings", "Photorealistic 3D Exterior Elevations",
+      "Interior 3D Perspective Modeling", "Vastu Layout Consulting", "Walkthrough Architectural Animations",
+      "Landscape & Master Site Planning", "Working & Structural Coordination Drawings"
+    ]
+  },
+  {
+    category: "RMC (Ready-Mix Concrete) Plant",
+    items: [
+      "M20 to M50 Grade Concrete Mix Design", "Transit Mixer Fleet Dispatch Logistics", "Boom Pump & Stationary Line Pumping",
+      "7-Day & 28-Day Concrete Cube Strength Lab Tests", "Self-Compacting & Flyash Concrete", "Temperature Controlled Mass Concreting"
+    ]
+  },
+  {
+    category: "Civil & Structural Consultancy",
+    items: [
+      "Building Structural Stability & Load Audits", "Geotechnical Soil Bearing Capacity Tests", "Seismic & Wind Load Analysis",
+      "Independent Third-Party QA/QC Verification", "Non-Destructive Rebound Hammer & Ultrasonic Tests", "Bar Bending Schedule (BBS) Verification"
+    ]
+  },
+  {
+    category: "MEP (Mechanical, Electrical & Plumbing)",
+    items: [
+      "HVAC Central Chiller & Ventilation Ducting", "Electrical Substation & HT/LT Panel Setup", "Sanitary Drainage & Internal Water Supply Piping",
+      "Fire Hydrant, Hose Reel & Sprinkler Networks", "Building Management Systems (BMS) Automation", "Diesel Generator (DG) & Solar PV Integration",
+      "Certified MEP Site Supervisors & Plumbers"
+    ]
+  },
+  {
+    category: "Construction Factory & Precast Manufacturing",
+    items: [
+      "Automated Precast Concrete Wall Panels", "Autoclave Aerated Concrete (AAC) Blocks", "Prestressed Hollowcore Concrete Slabs",
+      "Heavy Duty Flyash Bricks & Interlocking Pavers", "Direct Bulk Factory Yard Consignments", "Ready-Mix Batching Plant Manufacturing"
+    ]
+  },
+  {
+    category: "Channel Partner & Referral Network",
+    items: [
+      "Verified Real Estate Buyer Leads", "Developer Turnkey Mandate Referrals", "Escrow Commission Distribution Tracking",
+      "Tiered Institutional Partner Payouts", "Dedicated Partner QR & Referral Code"
+    ]
+  },
+  {
+    category: "Construction Material Marketplace",
+    items: [
+      "Wholesale OPC 53 & PPC 43 Grade Cement", "Fe-550D TMT Reinforcement Steel Rebars",
+      "River Sand, Crushed Stone Sand & Blue Metal 10/20mm", "High Precision Red Clay Bricks & AAC Blocks",
+      "Structural Steel Beams, MS Channels & Angles", "Waterproofing Chemicals, Admixtures & Epoxy Grouts",
+      "Binding Wire, Shuttering Ply & Construction Hardware"
+    ]
   }
 ];
 
@@ -643,24 +712,6 @@ const Footer = () => {
             <p className="text-sm text-gray-500">
               The most trusted marketplace for construction and interior renovation needs.
             </p>
-            <div className="mt-3 text-xs text-gray-600 space-y-2">
-              <p className="flex items-center gap-1.5">
-                <strong>WhatsApp:</strong>
-                <a 
-                  href="https://wa.me/9326294480" 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 font-semibold transition-colors"
-                >
-                  <img 
-                    src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" 
-                    alt="WhatsApp" 
-                    className="w-4 h-4" 
-                  />
-                  9326294480
-                </a>
-              </p>
-            </div>
             <div className="flex space-x-4 mt-4">
               <a href="#" className="text-gray-400 hover:text-blue-600"><Facebook size={20} /></a>
               <a href="#" className="text-gray-400 hover:text-red-600"><Youtube size={20} /></a>
@@ -698,51 +749,93 @@ const Footer = () => {
   );
 };
 
-export const ROLE_SYMBOLS: Record<UserRole, { img: string; label: string; desc: string }> = {
+export const ROLE_SYMBOLS: Record<UserRole, { img: string; label: string; desc: string; icon: any }> = {
+  // 1. Previous roles up to Channel Partner (kept in order, Material Supplier preserved as earlier)
   [UserRole.CLIENT]: {
     img: developerSymbolImg,
     label: 'Developer',
-    desc: 'I want to hire services & post civil projects'
+    desc: 'I want to hire services & post civil projects',
+    icon: Building2
   },
   [UserRole.VENDOR]: {
     img: vendorSymbolImg,
     label: 'Vendor',
-    desc: 'I offer contracting & general civil works'
+    desc: 'I offer contracting & general civil works',
+    icon: Briefcase
   },
   [UserRole.PMC]: {
     img: pmcSymbolImg,
     label: 'PMC',
-    desc: 'Project Management Consultant / Site Supervision / RA Bill & Quality Audits'
+    desc: 'Project Management Consultant / Site Supervision / RA Bill & Quality Audits',
+    icon: ShieldCheck
   },
   [UserRole.LABOUR]: {
     img: labourSymbolImg,
-    label: 'Labour/ Sub Contractor',
-    desc: 'I am a technician/helper seeking shift bookings'
+    label: 'Labour',
+    desc: 'I am a skilled technician/helper seeking shift bookings',
+    icon: HardHat
   },
   [UserRole.MATERIAL_SUPPLIER]: {
     img: supplierSymbolImg,
     label: 'Material Supplier',
-    desc: 'I supply raw building materials, tools & gear'
+    desc: 'Supplying bulk cement, TMT steel, sand & construction raw gear',
+    icon: Package
   },
   [UserRole.JOB]: {
     img: jobSymbolImg,
-    label: 'Job',
-    desc: 'I am seeking recruitment or engineering projects'
+    label: 'Construction and Engineering Staff',
+    desc: 'Civil site engineers, surveyors, draftsmen & supervisors',
+    icon: GraduationCap
   },
   [UserRole.FREELANCER]: {
     img: freelancerSymbolImg,
     label: 'Freelancer',
-    desc: 'Drafting plans/3D elevations, steel BBS, billing & advisory'
+    desc: 'Drafting plans/3D elevations, steel BBS, billing & advisory',
+    icon: Sparkles
   },
   [UserRole.BROKER]: {
     img: brokerSymbolImg,
     label: 'Brokers (Real Estate)',
-    desc: 'RERA Real Estate Agents / Outright Properties / Commercial Mandates'
+    desc: 'RERA Real Estate Agents / Outright Properties / Commercial Mandates',
+    icon: Home
   },
   [UserRole.CHANNEL_PARTNER]: {
     img: brokerSymbolImg,
     label: 'Channel Partner',
-    desc: 'Refer projects & clients, earn referral commissions'
+    desc: 'Refer projects & clients, earn referral commissions',
+    icon: Share2
+  },
+
+  // 2. Added after Channel Partner: Architect, RMC, Consultant, Construction Factory, MEP
+  [UserRole.ARCHITECT]: {
+    img: architectSymbolImg,
+    label: 'Architect',
+    desc: 'Architectural 2D blueprints, municipal approvals, 3D elevations & planning',
+    icon: Compass
+  },
+  [UserRole.RMC]: {
+    img: rmcSymbolImg,
+    label: 'RMC Plant',
+    desc: 'Ready-mix concrete batching plant, transit mixer logistics & pumping',
+    icon: Truck
+  },
+  [UserRole.CONSULTANT]: {
+    img: consultantSymbolImg,
+    label: 'Consultant',
+    desc: 'Structural engineering, geotech soil tests, MEP & civil quality audits',
+    icon: FileCheck2
+  },
+  [UserRole.CONSTRUCTION_FACTORY]: {
+    img: factorySymbolImg,
+    label: 'Construction Factory',
+    desc: 'Precast panels, AAC blocks, cement batch plant & manufacturing gear',
+    icon: Factory
+  },
+  [UserRole.MEP]: {
+    img: mepSymbolImg,
+    label: 'MEP',
+    desc: 'Mechanical, electrical and plumbing staff/ supervisor and labour',
+    icon: Wrench
   }
 };
 
@@ -751,17 +844,21 @@ const RoleSelection = ({
   activityRates, 
   materialRates,
   onOpenRateExplorer,
-  onRegister
+  onRegister,
+  onBackToHome
 }: { 
   onSelect: (role: UserRole) => void;
   activityRates: ActivityRate[];
   materialRates: MaterialRate[];
   onOpenRateExplorer: () => void;
   onRegister?: (role: UserRole) => void;
+  onBackToHome?: () => void;
 }) => {
   const [showRegister, setShowRegister] = useState(false);
   const [regRole, setRegRole] = useState<UserRole | null>(null);
-  const [selectedServiceModal, setSelectedServiceModal] = useState<'brokersPoint' | 'pmc' | null>(null);
+  const [selectedServiceModal, setSelectedServiceModal] = useState<'brokersPoint' | 'pmc' | 'fullCatalog' | null>(null);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState('All');
 
   // Registration form states
   const [fullName, setFullName] = useState('');
@@ -827,6 +924,7 @@ const RoleSelection = ({
     setCompanyName('');
     setGstNumber('');
     setShowRegister(false);
+    onBackToHome?.();
   };
 
   const RegistrationModal = () => (
@@ -849,11 +947,17 @@ const RoleSelection = ({
                 {regRole === UserRole.CLIENT ? 'Developer' : 
                  regRole === UserRole.VENDOR ? 'Vendor' : 
                  regRole === UserRole.PMC ? 'PMC / Project Management Consultant' : 
-                 regRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : 
+                 regRole === UserRole.LABOUR ? 'Labour' : 
                  regRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' : 
-                 regRole === UserRole.JOB ? 'Job / Engineering Candidate' : 
+                 regRole === UserRole.JOB ? 'Construction and Engineering Staff' : 
                  regRole === UserRole.FREELANCER ? 'Freelancer' : 
-                 regRole === UserRole.BROKER ? 'Brokers (Real Estate)' : regRole}
+                 regRole === UserRole.BROKER ? 'Brokers (Real Estate)' : 
+                 regRole === UserRole.CHANNEL_PARTNER ? 'Channel Partner' : 
+                 regRole === UserRole.ARCHITECT ? 'Architect' : 
+                 regRole === UserRole.RMC ? 'RMC Plant' : 
+                 regRole === UserRole.CONSULTANT ? 'Consultant' : 
+                 regRole === UserRole.CONSTRUCTION_FACTORY ? 'Construction Factory' : 
+                 regRole === UserRole.MEP ? 'MEP Staff & Supervisor' : regRole}
               </p>
             </div>
           </div>
@@ -962,28 +1066,36 @@ const RoleSelection = ({
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
               <p className="text-gray-500 mb-6">Please select your role to login to your dashboard.</p>
               
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
-                {Object.entries(ROLE_SYMBOLS).map(([roleKey, item]) => (
-                  <button
-                    key={roleKey}
-                    onClick={() => onSelect(roleKey as UserRole)}
-                    className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-150 hover:border-orange-400 flex flex-col items-center text-center group hover:-translate-y-1 relative overflow-hidden"
-                  >
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 mb-3 rounded-2xl overflow-hidden shadow-md ring-2 ring-gray-100 group-hover:ring-orange-500 transition-all">
-                      <img 
-                        src={item.img} 
-                        alt={item.label} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 mb-1 group-hover:text-orange-600 transition-colors">
-                      {item.label} Login
-                    </h3>
-                    <p className="text-[10px] text-gray-500 font-medium min-h-[2.25rem] leading-tight">
-                      {item.desc}
-                    </p>
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Object.entries(ROLE_SYMBOLS).map(([roleKey, item]) => {
+                  const IconComp = item.icon || Building2;
+                  return (
+                    <button
+                      key={roleKey}
+                      onClick={() => onSelect(roleKey as UserRole)}
+                      className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-150 hover:border-orange-400 flex flex-col items-center text-center group hover:-translate-y-1 relative overflow-hidden"
+                    >
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 mb-3 rounded-2xl overflow-hidden shadow-md ring-2 ring-gray-100 group-hover:ring-orange-500 transition-all relative bg-orange-50 flex items-center justify-center">
+                        <img 
+                          src={item.img} 
+                          alt={item.label} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <IconComp size={30} className="text-orange-600 absolute" />
+                      </div>
+                      <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 mb-1 group-hover:text-orange-600 transition-colors flex items-center justify-center gap-1.5">
+                        <IconComp size={14} className="text-orange-500 shrink-0" />
+                        {item.label} Login
+                      </h3>
+                      <p className="text-[10px] text-gray-500 font-medium min-h-[2.25rem] leading-tight line-clamp-2">
+                        {item.desc}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -994,20 +1106,21 @@ const RoleSelection = ({
                     <p className="text-sm text-gray-600">Create a verified account today to start listing or hiring.</p>
                   </div>
                   <div className="flex flex-wrap gap-2.5 justify-center">
-                     {Object.entries(ROLE_SYMBOLS).map(([roleKey, item]) => (
-                       <button 
-                         key={roleKey}
-                         onClick={() => handleRegister(roleKey as UserRole)} 
-                         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-orange-400 rounded-xl text-xs font-bold text-gray-800 hover:bg-orange-50/50 shadow-sm transition-all"
-                       >
-                         <img 
-                           src={item.img} 
-                           alt={item.label} 
-                           className="w-5 h-5 rounded-full object-cover shrink-0 ring-1 ring-orange-300" 
-                         />
-                         <span>{item.label} Registration</span>
-                       </button>
-                     ))}
+                     {Object.entries(ROLE_SYMBOLS).map(([roleKey, item]) => {
+                       const IconComp = item.icon || Building2;
+                       return (
+                         <button 
+                           key={roleKey}
+                           onClick={() => handleRegister(roleKey as UserRole)} 
+                           className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-orange-400 rounded-xl text-xs font-bold text-gray-800 hover:bg-orange-50/50 shadow-sm transition-all"
+                         >
+                           <div className="w-5 h-5 rounded-md overflow-hidden shrink-0 ring-1 ring-orange-300 bg-orange-50 flex items-center justify-center text-orange-600">
+                             <IconComp size={12} className="text-orange-600 shrink-0" />
+                           </div>
+                           <span>{item.label} Registration</span>
+                         </button>
+                       );
+                     })}
                   </div>
                </div>
             </div>
@@ -1074,7 +1187,7 @@ const RoleSelection = ({
                     </p>
                     <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
                       <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> AI Project Scope & BOQ Generator</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Verified Labour Force Dispatch</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Labour (Labour Naka) Dispatch</li>
                     </ul>
                   </div>
                   <button 
@@ -1172,7 +1285,7 @@ const RoleSelection = ({
                         </div>
                         <div>
                           <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Labour & Sub-Contractor Hub</h4>
-                          <span className="text-[10px] text-gray-500 font-medium">Instant Daily Shift Deployment</span>
+                          <span className="text-[10px] text-gray-500 font-medium">Instant Labour (Labour Naka) Shift Deployment</span>
                         </div>
                       </div>
                       <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
@@ -1183,30 +1296,45 @@ const RoleSelection = ({
                       Hire certified masons, bar benders, shuttering carpenters, painters, electricians and helpers for immediate same-day site deployment.
                     </p>
                     <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
-                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Shift Booking & Direct Dispatch</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Labour (Labour Naka) Booking & Dispatch</li>
                       <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Transparent Regional Standard Wages</li>
                     </ul>
                   </div>
-                  <button 
-                    onClick={() => onSelect(UserRole.LABOUR)}
-                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <span>Launch Labour Portal</span>
-                    <ArrowRight size={13} />
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.LABOUR)}
+                      className="py-2 px-3 bg-white hover:bg-orange-50 text-orange-900 border border-orange-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-orange-600" />
+                      <span>Labour Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.LABOUR)}
+                      className="py-2 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>Labour Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* 5. Material Supplier Hub */}
-                <div className="bg-slate-50 hover:bg-orange-50/30 border border-gray-200 hover:border-orange-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                {/* 5. Construction Material Marketplace */}
+                <div className="bg-slate-50 hover:bg-emerald-50/30 border border-gray-200 hover:border-emerald-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0">
-                          <img src={ROLE_SYMBOLS[UserRole.MATERIAL_SUPPLIER].img} alt="Supplier" className="w-full h-full object-cover" />
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-emerald-50 flex items-center justify-center relative">
+                          <img 
+                            src={ROLE_SYMBOLS[UserRole.MATERIAL_SUPPLIER].img} 
+                            alt="Construction Material" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <Package size={20} className="text-emerald-600 absolute" />
                         </div>
                         <div>
-                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Material Supplier Marketplace</h4>
-                          <span className="text-[10px] text-gray-500 font-medium">Bulk Raw Materials Direct B2B</span>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-emerald-600 transition-colors">Construction Material Marketplace</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Cement, Steel, Sand & Raw Materials</span>
                         </div>
                       </div>
                       <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
@@ -1217,17 +1345,26 @@ const RoleSelection = ({
                       Procure OPC/PPC Cement, Fe550D TMT Steel, RMC Ready Mix Concrete, River/Crushed Sand, Aggregates and heavy equipment at factory prices.
                     </p>
                     <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
-                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Direct Wholesale Manufacturer Rates</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> Instant Truckload & Yard Logistics Dispatch</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Direct Wholesale Manufacturer Rates</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Instant Truckload & Yard Logistics Dispatch</li>
                     </ul>
                   </div>
-                  <button 
-                    onClick={() => onSelect(UserRole.MATERIAL_SUPPLIER)}
-                    className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <span>Launch Supplier Portal</span>
-                    <ArrowRight size={13} />
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.MATERIAL_SUPPLIER)}
+                      className="py-2 px-3 bg-white hover:bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-emerald-600" />
+                      <span>Material Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.MATERIAL_SUPPLIER)}
+                      className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>Material Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* 6. Job & Recruitment Placement */}
@@ -1239,8 +1376,8 @@ const RoleSelection = ({
                           <img src={ROLE_SYMBOLS[UserRole.JOB].img} alt="Job" className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Placement & Job Board</h4>
-                          <span className="text-[10px] text-gray-500 font-medium">Civil Engineering Careers</span>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">Construction & Engineering Staff</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Civil Site Engineers & Supervisors</span>
                         </div>
                       </div>
                       <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
@@ -1248,7 +1385,7 @@ const RoleSelection = ({
                       </span>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                      Recruitment board connecting site engineers, QA/QC managers, safety officers, quantity surveyors, and crane operators directly with developers.
+                      Recruitment board connecting site engineers, QA/QC managers, safety officers, quantity surveyors, and technical supervisors directly with developers.
                     </p>
                     <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
                       <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-orange-500" /> 100% Direct Recruiter Interview Calls</li>
@@ -1259,7 +1396,7 @@ const RoleSelection = ({
                     onClick={() => onSelect(UserRole.JOB)}
                     className="w-full py-2 px-3 bg-white hover:bg-orange-600 hover:text-white border border-gray-200 hover:border-orange-600 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
                   >
-                    <span>Launch Job Placement Portal</span>
+                    <span>Launch Construction & Engineering Staff Portal</span>
                     <ArrowRight size={13} />
                   </button>
                 </div>
@@ -1340,6 +1477,300 @@ const RoleSelection = ({
                     </button>
                   </div>
                 </div>
+
+                {/* 9. Channel Partner Portal */}
+                <div className="bg-slate-50 hover:bg-sky-50/30 border border-gray-200 hover:border-sky-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-sky-50 flex items-center justify-center relative">
+                          <img 
+                            src={brokerSymbolImg} 
+                            alt="Channel Partner" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <Share2 size={20} className="text-sky-600 absolute" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-sky-600 transition-colors">Channel Partner Network</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Project Referrals & Partner Commission</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 09
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Connect real estate leads, civil developers and contractors to the platform and earn attractive tiered referral payouts and commissions.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-sky-500" /> Dedicated Referral Tracking Code</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-sky-500" /> Verified Commission Escrow Payouts</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.CHANNEL_PARTNER)}
+                      className="py-2 px-3 bg-white hover:bg-sky-50 text-sky-900 border border-sky-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-sky-600" />
+                      <span>Partner Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.CHANNEL_PARTNER)}
+                      className="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>Partner Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 10. Architect & Design Studio Portal */}
+                <div className="bg-slate-50 hover:bg-indigo-50/30 border border-gray-200 hover:border-indigo-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-indigo-50 flex items-center justify-center relative">
+                          <img 
+                            src={architectSymbolImg} 
+                            alt="Architect" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <Compass size={20} className="text-indigo-600 absolute" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">Architect & Design Studio</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Municipal Sanctions & 3D Elevations</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 10
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Access verified residential and commercial architectural blueprints, AutoCAD sanction drawings, vastu layout planning, and photorealistic 3D exterior/interior elevations.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-indigo-500" /> Municipal Sanctions & Layout Approvals</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-indigo-500" /> 3D Elevations & Photorealistic Renders</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.ARCHITECT)}
+                      className="py-2 px-3 bg-white hover:bg-indigo-50 text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-indigo-600" />
+                      <span>Architect Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.ARCHITECT)}
+                      className="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>Architect Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 11. RMC (Ready-Mix Concrete) Plant Portal */}
+                <div className="bg-slate-50 hover:bg-amber-50/30 border border-gray-200 hover:border-amber-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-amber-50 flex items-center justify-center relative">
+                          <img 
+                            src={rmcSymbolImg} 
+                            alt="RMC Plant" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <Truck size={20} className="text-amber-600 absolute" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-amber-600 transition-colors">RMC (Ready Mix Concrete)</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Batching Plant & Concrete Pumps</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 11
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Order certified ready-mix concrete from M20 to M50 grade, dispatch transit mixer fleets, schedule boom/line concrete pumps, and get 7 & 28-day cube strength certificates.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-amber-500" /> Direct Batching Plant Pumping Dispatch</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-amber-500" /> Lab-Tested Cube Strength Certificates</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.RMC)}
+                      className="py-2 px-3 bg-white hover:bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-amber-600" />
+                      <span>RMC Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.RMC)}
+                      className="py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>RMC Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 12. Consultant (Civil, Structural & QA/QC) Portal */}
+                <div className="bg-slate-50 hover:bg-blue-50/30 border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-blue-50 flex items-center justify-center relative">
+                          <img 
+                            src={consultantSymbolImg} 
+                            alt="Consultant" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <FileCheck2 size={20} className="text-blue-600 absolute" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">Civil & Structural Consultant</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Stability Certificates & Geotech</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 12
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Connect with licensed structural consultants for building stability certificates, geotech soil investigation reports, bar bending audits, and independent third-party QA/QC.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Structural Stability Audit & Certification</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Geotech Soil Testing & Foundation Design</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.CONSULTANT)}
+                      className="py-2 px-3 bg-white hover:bg-blue-50 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-blue-600" />
+                      <span>Consultant Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.CONSULTANT)}
+                      className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>Consultant Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 13. Construction Factory & Plants */}
+                <div className="bg-slate-50 hover:bg-stone-50/50 border border-gray-200 hover:border-stone-400 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-stone-100 flex items-center justify-center relative">
+                          <img 
+                            src={factorySymbolImg} 
+                            alt="Construction Factory" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <Factory size={20} className="text-stone-700 absolute" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-stone-800 transition-colors">Construction Factory & Plants</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Precast Panels, AAC Blocks & Plants</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 13
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Industrial manufacturing units, automated precast concrete panels, autoclave aerated concrete (AAC) blocks, paver tiles and heavy manufacturing plants.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-stone-600" /> Direct Manufacturer Factory Consignments</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-stone-600" /> Bulk Heavy Project Invoicing & Transport</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.CONSTRUCTION_FACTORY)}
+                      className="py-2 px-3 bg-white hover:bg-stone-100 text-stone-900 border border-stone-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-stone-700" />
+                      <span>Factory Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.CONSTRUCTION_FACTORY)}
+                      className="py-2 px-3 bg-stone-800 hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>Factory Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 14. MEP (Mechanical, Electrical & Plumbing) Staff & Labour Portal */}
+                <div className="bg-slate-50 hover:bg-amber-50/40 border border-gray-200 hover:border-amber-400 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-200 shrink-0 bg-amber-50 flex items-center justify-center relative">
+                          <img 
+                            src={mepSymbolImg} 
+                            alt="MEP Portal" 
+                            className="w-full h-full object-cover relative z-10" 
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                          />
+                          <Wrench size={20} className="text-amber-800 absolute" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-gray-900 text-sm group-hover:text-amber-800 transition-colors">MEP Engineering & Staff</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">Mechanical, Electrical, Plumbing & Supervisors</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-white text-gray-700 px-2 py-1 rounded-md border border-gray-200">
+                        Vertical 14
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Specialized portal for mechanical HVAC engineers, certified electricians, master plumbers, MEP site supervisors and fire fighting technicians.
+                    </p>
+                    <ul className="text-[11px] text-gray-500 space-y-1 mb-4">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-amber-700" /> HVAC, HT/LT Panels & Fire Fighting</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-amber-700" /> MEP Supervisors, Foremen & Skilled Labour</li>
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => onRegister?.(UserRole.MEP)}
+                      className="py-2 px-3 bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <UserPlus size={13} className="text-amber-800" />
+                      <span>MEP Register</span>
+                    </button>
+                    <button 
+                      onClick={() => onSelect(UserRole.MEP)}
+                      className="py-2 px-3 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <span>MEP Login</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1371,12 +1802,14 @@ const RoleSelection = ({
                   </div>
                 ))}
               </div>
-              <div className="p-4 bg-gray-50 text-center border-t border-gray-100">
+              <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50 text-center border-t border-orange-200/80">
                 <button 
-                  onClick={() => setSelectedServiceModal('brokersPoint')}
-                  className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center justify-center gap-1 w-full py-1"
+                  onClick={() => setSelectedServiceModal('fullCatalog')}
+                  className="text-xs font-black text-orange-700 hover:text-orange-800 flex items-center justify-center gap-1.5 w-full py-2 bg-white hover:bg-orange-100/60 border border-orange-200 rounded-xl shadow-2xs transition-all active:scale-98"
                 >
-                  Explore Brokers Point & Full Catalog <ArrowRight size={12} />
+                  <Sparkles size={14} className="text-orange-600 animate-pulse" />
+                  <span>Pop-Up Complete Services Catalog</span>
+                  <ArrowRight size={12} />
                 </button>
               </div>
             </div>
@@ -1437,7 +1870,10 @@ const RoleSelection = ({
             <div className="px-6 py-3.5 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
               <span>Direct RERA real estate mandates with guaranteed escrow payout safety.</span>
               <button 
-                onClick={() => setSelectedServiceModal(null)}
+                onClick={() => {
+                  setSelectedServiceModal(null);
+                  onBackToHome?.();
+                }}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition-all"
               >
                 Back to Homepage
@@ -1496,10 +1932,141 @@ const RoleSelection = ({
             <div className="px-6 py-3.5 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
               <span>Professional quality control & technical civil engineering auditing for high-rise buildings.</span>
               <button 
-                onClick={() => setSelectedServiceModal(null)}
+                onClick={() => {
+                  setSelectedServiceModal(null);
+                  onBackToHome?.();
+                }}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition-all"
               >
                 Back to Homepage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Service Page Modal: Full Services Catalog */}
+      {selectedServiceModal === 'fullCatalog' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex flex-col items-center justify-start p-2 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-50 w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200 my-auto max-h-[92vh] flex flex-col">
+            <div className="px-6 py-4 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white flex items-center justify-between sticky top-0 z-20 shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-xs">
+                  <Sparkles size={22} className="animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                    Our Services Directory & Multi-Platform Catalog
+                  </h2>
+                  <p className="text-[11px] text-orange-100 font-medium">
+                    85+ Verified Construction, MEP, Structural, Precast, Interior & Real Estate Services
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedServiceModal(null)}
+                className="p-2 bg-black/20 hover:bg-black/35 rounded-xl text-white transition-all active:scale-95"
+                title="Close Catalog"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-white border-b border-gray-200 space-y-3 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search any service (e.g. AutoCAD, RMC Concrete, Soil Test, Precast, MEP, Plumber, TMT Steel...)"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:bg-white focus:outline-none transition-all"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs">
+                {['All', ...DETAILED_SERVICES.map(s => s.category)].map((cat) => {
+                  const isSelected = catalogCategory === cat || (cat === 'All' && !catalogCategory);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setCatalogCategory(cat === 'All' ? '' : cat)}
+                      className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap transition-all text-xs ${
+                        isSelected 
+                          ? 'bg-orange-600 text-white shadow-xs' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cat.replace(' Services', '')}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-slate-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {DETAILED_SERVICES
+                  .filter(section => {
+                    if (catalogCategory && catalogCategory !== 'All') {
+                      if (section.category !== catalogCategory) return false;
+                    }
+                    if (catalogSearch.trim()) {
+                      const query = catalogSearch.toLowerCase();
+                      const matchesCategory = section.category.toLowerCase().includes(query);
+                      const matchesItem = section.items.some(i => i.toLowerCase().includes(query));
+                      return matchesCategory || matchesItem;
+                    }
+                    return true;
+                  })
+                  .map((section, idx) => (
+                    <div 
+                      key={idx} 
+                      className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs hover:border-orange-300 hover:shadow-md transition-all flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+                          <h3 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-orange-600 shrink-0"></span>
+                            {section.category}
+                          </h3>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                            {section.items.length} Services
+                          </span>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {section.items.map((item, i) => (
+                            <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                              <CheckCircle2 size={13} className="text-orange-500 shrink-0 mt-0.5" />
+                              <span className="leading-snug">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-gray-400">Construction Mart Verified</span>
+                        <button
+                          onClick={() => {
+                            setSelectedServiceModal(null);
+                            onRegister ? onRegister(UserRole.CLIENT) : onSelect(UserRole.CLIENT);
+                          }}
+                          className="px-3 py-1.5 bg-orange-50 hover:bg-orange-600 text-orange-700 hover:text-white rounded-xl text-xs font-bold transition-all border border-orange-200"
+                        >
+                          Book / Inquire →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+              <span>All 85+ multi-platform services backed by certified quality verification & escrow protection.</span>
+              <button 
+                onClick={() => setSelectedServiceModal(null)}
+                className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl font-bold transition-all"
+              >
+                Close Catalog
               </button>
             </div>
           </div>
@@ -1509,18 +2076,54 @@ const RoleSelection = ({
   );
 };
 
-// 2. Main App Component
 const App: React.FC = () => {
   const auth = useAuth();
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
+  const [currentRole, setCurrentRole] = useState<UserRole | null>(() =>
+    auth.user && auth.user.role !== 'SUPERADMIN' ? (auth.user.role as UserRole) : null
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'requests' | 'myPosting' | 'messages' | 'vendorProfile' | 'vendorRates' | 'quotation' | 'marketRates'>('dashboard');
   const [showLogin, setShowLogin] = useState(false);
   const [loginInitialMode, setLoginInitialMode] = useState<'login' | 'register'>('login');
-  const openLogin = (mode: 'login' | 'register' = 'login') => {
+  const [loginInitialRole, setLoginInitialRole] = useState<UserRole | undefined>(undefined);
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashSecondsLeft, setSplashSecondsLeft] = useState(5);
+  const prevUserIdRef = React.useRef<string | null>(auth.user?.id || null);
+
+  const triggerSplash = () => {
+    setSplashSecondsLeft(5);
+    setShowSplash(true);
+  };
+
+  useEffect(() => {
+    if (!showSplash) return;
+    const interval = setInterval(() => {
+      setSplashSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setShowSplash(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showSplash]);
+
+  const openLogin = (mode: 'login' | 'register' = 'login', role?: UserRole) => {
     setLoginInitialMode(mode);
+    setLoginInitialRole(role);
     setShowLogin(true);
+  };
+  const handleLogout = () => {
+    setShowLogin(false);
+    setSidebarOpen(false);
+    setDirectoryOpen(false);
+    setActiveTab('dashboard');
+    setCurrentRole(null);
+    auth.logout();
+    triggerSplash();
   };
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -1534,11 +2137,11 @@ const App: React.FC = () => {
     return INITIAL_MESSAGES;
   });
 
-  // Load chat history from database — use dedicated chat query to avoid fetching 1075 users every 4s
+  // Load chat history from database (Supabase submissions via bookings fallback) and keep in sync
   useEffect(() => {
     const loadRemoteChat = async () => {
       try {
-        const submissions = await fetchChatMessages();
+        const submissions = await fetchAllSubmissions();
         const remoteChats = submissions
           .filter((s: any) => s.type === 'chat_message' && s.data)
           .map((s: any) => s.data as ChatMessage);
@@ -1712,12 +2315,18 @@ const App: React.FC = () => {
   const [applyProfession, setApplyProfession] = useState('');
   const [applyStartDate, setApplyStartDate] = useState('');
 
-  // New Project State (Client only)
+  // New Project / Requirement State
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showPostReqDropdown, setShowPostReqDropdown] = useState(false);
+  const [newProjectCategory, setNewProjectCategory] = useState<RequirementCategory>('Vendor');
 
   // Support & About Modals
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showServicesPopupModal, setShowServicesPopupModal] = useState(false);
+  const [servicesSearchQuery, setServicesSearchQuery] = useState('');
+  const [selectedServiceCategoryTab, setSelectedServiceCategoryTab] = useState<string>('All');
+  const servicesCarouselRef = useRef<HTMLDivElement>(null);
 
   // Client Requires (Vendor page) state
   const [showClientRequiresModal, setShowClientRequiresModal] = useState(false);
@@ -1746,20 +2355,30 @@ const App: React.FC = () => {
     return reqType === selectedRequesterType && reqCat === selectedReqCategory;
   });
 
-  // Derive the active dashboard role from the logged-in user
+  // Derive the active dashboard role from the logged-in user and trigger 5s splash on login/signup/logout
   useEffect(() => {
     if (!auth.ready) return;
+    const currentId = auth.user?.id || null;
+    if (prevUserIdRef.current !== currentId) {
+      prevUserIdRef.current = currentId;
+      triggerSplash();
+    }
     if (auth.user && auth.user.role !== 'SUPERADMIN') {
       setCurrentRole(auth.user.role as UserRole);
+      setShowLogin(false);
     } else if (!auth.user) {
       setCurrentRole(null);
+      setShowLogin(false);
     }
   }, [auth.user, auth.ready]);
 
   // Navigation Logic
   const goBack = () => {
-    // In a real router, this would go back history. Here we just reset tab for demo feel.
-    if (activeTab !== 'dashboard') setActiveTab('dashboard');
+    if (activeTab !== 'dashboard') {
+      setActiveTab('dashboard');
+    } else {
+      handleLogout();
+    }
   };
   
   const goForward = () => {
@@ -1818,9 +2437,53 @@ const App: React.FC = () => {
     saveSubmission('chat_message', newMsg).catch(() => {});
   };
 
+  // 10-second intro splash screen before showing the home screen
+  if (showSplash) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 select-none relative overflow-hidden">
+        <div className="flex flex-col items-center text-center max-w-xl w-full animate-in fade-in zoom-in-95 duration-500">
+          <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 flex items-center justify-center mb-6">
+            <img
+              src={LOGO_IMAGE_PATH}
+              alt="Construction Mart SHK Emblem"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+
+          <h1 className="text-2xl sm:text-4xl md:text-[42px] font-extrabold tracking-tight leading-none mt-2">
+            <span className="text-[#333333]">constructionmart</span>
+            <span className="text-[#D97236]">shk</span>
+            <span className="text-[#333333]">.com</span>
+          </h1>
+
+          <p className="mt-5 text-[#3A3A3A] text-base sm:text-xl md:text-[22px] font-normal leading-snug max-w-md">
+            The most trusted marketplace for construction and interior renovation needs.
+          </p>
+
+          <div className="mt-10 flex flex-col items-center gap-3 w-48">
+            <div className="w-full h-1 bg-neutral-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#D97236] transition-all duration-1000 ease-linear"
+                style={{ width: `${((5 - splashSecondsLeft) / 5) * 100}%` }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSplash(false)}
+              className="text-xs font-medium text-neutral-400 hover:text-neutral-700 transition-colors tabular-nums"
+            >
+              Entering in {splashSecondsLeft}s · Skip
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Auth gate: loading, then super admin console or the marketplace home.
   // Guests land on the RoleSelection home page first (sliders + role cards), not the login form.
-  if (!auth.ready || (auth.user && auth.user.role !== 'SUPERADMIN' && !currentRole)) {
+  if (!auth.ready) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -1831,7 +2494,7 @@ const App: React.FC = () => {
     );
   }
   if (auth.user?.role === 'SUPERADMIN') {
-    return <SuperAdminPanel onLogout={auth.logout} />;
+    return <SuperAdminPanel onLogout={handleLogout} />;
   }
 
   // Reusable overlays (rate explorer drawer + login modal) shown for guests and logged-in users alike.
@@ -1872,10 +2535,17 @@ const App: React.FC = () => {
     </div>
   );
 
-  const loginModal = showLogin && !auth.user && (
+  const loginModal = showLogin && (
     <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto">
       <div className="min-h-full flex items-center justify-center p-4 sm:p-6 py-10">
-        <AuthScreen onClose={() => setShowLogin(false)} initialMode={loginInitialMode} />
+        <AuthScreen
+          onClose={() => {
+            setShowLogin(false);
+            triggerSplash();
+          }}
+          initialMode={loginInitialMode}
+          initialRole={loginInitialRole}
+        />
       </div>
     </div>
   );
@@ -1885,11 +2555,12 @@ const App: React.FC = () => {
     return (
       <>
         <RoleSelection
-          onSelect={() => openLogin('login')}
+          onSelect={(role) => openLogin('login', role)}
           activityRates={activityRates}
           materialRates={materialRates}
           onOpenRateExplorer={() => setIsRateExplorerOpen(true)}
-          onRegister={() => openLogin('register')}
+          onRegister={(role) => openLogin('register', role)}
+          onBackToHome={triggerSplash}
         />
         {rateExplorerDrawer}
         {loginModal}
@@ -1901,23 +2572,23 @@ const App: React.FC = () => {
     <>
         <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white sticky top-0 z-30 shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+      <header className="bg-white sticky top-0 z-30 shadow-sm border-b border-gray-100 w-full">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg lg:hidden"
+              className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg lg:hidden shrink-0"
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
             
             {/* Nav Controls */}
-            <div className="hidden lg:flex items-center gap-1 text-gray-400">
+            <div className="hidden lg:flex items-center gap-1 text-gray-400 shrink-0">
                <button onClick={goBack} className="p-1 hover:text-gray-700 hover:bg-gray-100 rounded"><ChevronLeft size={20}/></button>
                <button onClick={goForward} className="p-1 hover:text-gray-700 hover:bg-gray-100 rounded"><ChevronRight size={20}/></button>
             </div>
 
-            <div className="flex items-center gap-2 ml-2 min-w-max cursor-pointer" onClick={() => (auth.user ? auth.logout() : openLogin('login'))} title={auth.user ? "Logout" : "Login / Sign Up"}>
+            <div className="flex items-center min-w-0 cursor-pointer" onClick={() => (auth.user ? handleLogout() : openLogin('login'))} title={auth.user ? "Logout" : "Login / Sign Up"}>
               <Logo size="sm" />
             </div>
           </div>
@@ -1936,91 +2607,40 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-             <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 rounded-full px-3.5 py-1 border border-orange-200 shadow-sm">
-                <span className="text-[10px] font-black tracking-wider text-gray-500 uppercase">ROLE:</span>
-                {currentRole && ROLE_SYMBOLS[currentRole] && (
-                  <img 
-                    src={ROLE_SYMBOLS[currentRole].img} 
-                    alt={currentRole} 
-                    className="w-7 h-7 rounded-full object-cover ring-2 ring-orange-500 shrink-0 shadow-sm" 
-                  />
-                )}
-                <span className="text-xs font-black text-orange-700 uppercase tracking-wide">
-                  {currentRole !== null && currentRole !== undefined
-                    ? (currentRole === UserRole.CLIENT ? 'Developer' : currentRole === UserRole.LABOUR ? 'Labour/Sub Contractor' : currentRole === UserRole.FREELANCER ? 'Freelancer' : currentRole.toString())
-                    : 'Guest'}
-                </span>
-             </div>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* + Post Vacancy Button on All Pages */}
+            <button
+              onClick={() => {
+                setShowNewProjectModal(true);
+              }}
+              className="flex items-center gap-1 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white px-3 sm:px-4 py-1.5 rounded-full transition-all text-xs font-black shadow-sm shadow-orange-200 active:scale-95 whitespace-nowrap"
+              title="Post Vacancy"
+            >
+              + Post Vacancy
+            </button>
 
-            {/* WhatsApp Directory */}
-            <div className="relative">
-              <button 
-                onClick={() => setDirectoryOpen(!directoryOpen)}
-                className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full hover:bg-green-100 transition-colors border border-green-200"
-              >
-                <MessageSquare size={18} />
-                <span className="text-sm font-semibold hidden sm:inline">WhatsApp Directory</span>
-              </button>
-              
-              {directoryOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in slide-in-from-top-2">
-                   <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-                      <h4 className="font-bold text-gray-800">Direct Contact</h4>
-                      <button onClick={() => setDirectoryOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={16}/></button>
-                   </div>
-                   <div className="space-y-3">
-                     {WHATSAPP_DIRECTORY.map((contact, idx) => (
-                       <a 
-                        key={idx} 
-                        href={`https://wa.me/${contact.number}`} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="flex items-center justify-between p-2 hover:bg-green-50 rounded-lg group transition-colors"
-                       >
-                         <div className="flex items-center gap-3">
-                           <div className="bg-green-100 text-green-600 p-2 rounded-full">
-                             <Phone size={16} />
-                           </div>
-                           <div>
-                             <p className="text-sm font-medium text-gray-800">{contact.name}</p>
-                             <p className="text-xs text-gray-500">{contact.role}</p>
-                           </div>
-                         </div>
-                         <img 
-                           src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" 
-                           alt="WA" 
-                           className="w-5 h-5 opacity-70 group-hover:opacity-100" 
-                         />
-                       </a>
-                     ))}
-                   </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border-2 border-white shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border-2 border-white shadow-sm shrink-0">
                <img src={`https://picsum.photos/seed/${currentRole || 'guest'}/100/100`} alt="Avatar" className="w-full h-full object-cover" />
             </div>
 
             {/* Login / Sign Up (guest) or Logout */}
             {auth.user ? (
               <button
-                onClick={auth.logout}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-full transition-colors border border-gray-200"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 px-2.5 sm:px-3 py-1.5 rounded-full transition-colors border border-gray-200 shrink-0 whitespace-nowrap"
                 title="Logout"
               >
-                <LogOut size={17} />
-                <span className="text-xs font-bold hidden sm:inline">Logout</span>
+                <LogOut size={16} />
+                <span className="text-xs font-bold">Logout</span>
               </button>
             ) : (
               <button
                 onClick={() => openLogin('login')}
-                className="flex items-center gap-1.5 text-orange-700 hover:text-white hover:bg-orange-600 bg-orange-50 px-3 py-1.5 rounded-full transition-colors border border-orange-200"
+                className="flex items-center gap-1.5 text-orange-700 hover:text-white hover:bg-orange-600 bg-orange-50 px-2.5 sm:px-3 py-1.5 rounded-full transition-colors border border-orange-200 shrink-0 whitespace-nowrap"
                 title="Login / Sign Up"
               >
-                <LogIn size={17} />
-                <span className="text-xs font-bold hidden sm:inline">Login / Sign Up</span>
+                <LogIn size={16} />
+                <span className="text-xs font-bold">Login / Sign Up</span>
               </button>
             )}
           </div>
@@ -2053,6 +2673,17 @@ const App: React.FC = () => {
             </div>
             
             <nav className="flex-1 p-4 space-y-1">
+              {/* + Post Vacancy in Sidebar */}
+              <button 
+                onClick={() => {
+                  setShowNewProjectModal(true);
+                  if (window.innerWidth < 1024) setSidebarOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black rounded-xl transition-all shadow-sm shadow-orange-200 mb-2"
+              >
+                + Post Vacancy
+              </button>
+
               <button 
                 onClick={() => setActiveTab('dashboard')}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
@@ -2146,7 +2777,7 @@ const App: React.FC = () => {
 
             <div className="p-4 border-t border-gray-100">
                <button 
-                onClick={() => setCurrentRole(null)}
+                onClick={handleLogout}
                 className="w-full py-2 text-sm text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"
                >
                  Sign Out
@@ -2165,7 +2796,7 @@ const App: React.FC = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {activeTab === 'requests' && <RequestsView mode="all" />}
+          {activeTab === 'requests' && <RequestsView mode="all" onPostVacancy={() => setShowNewProjectModal(true)} />}
           {activeTab === 'myPosting' && <MyPosting />}
 
           {activeTab === 'messages' && (
@@ -2186,6 +2817,12 @@ const App: React.FC = () => {
               {currentRole === UserRole.JOB && <JobProfile />}
               {currentRole === UserRole.FREELANCER && <FreelancerProfile />}
               {currentRole === UserRole.BROKER && <BrokerProfile />}
+              {currentRole === UserRole.CHANNEL_PARTNER && <BrokerProfile />}
+              {currentRole === UserRole.ARCHITECT && <FreelancerProfile />}
+              {currentRole === UserRole.RMC && <SupplierProfile />}
+              {currentRole === UserRole.CONSULTANT && <PMCProfile />}
+              {currentRole === UserRole.CONSTRUCTION_FACTORY && <SupplierProfile />}
+              {currentRole === UserRole.MEP && <JobProfile />}
             </div>
           )}
 
@@ -2219,14 +2856,22 @@ const App: React.FC = () => {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {currentRole ? (
                       <>Welcome back, {
-                        currentRole === UserRole.CLIENT ? 'Client / Developer' : 
-                        currentRole === UserRole.VENDOR ? 'Vendor / Partner' : 
-                        currentRole === UserRole.PMC ? 'PMC / Site Quality Consultant' :
-                        currentRole === UserRole.LABOUR ? 'Skilled Worker' : 
-                        currentRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' :
-                        currentRole === UserRole.JOB ? 'Job Seeker / Engineer' :
-                        currentRole === UserRole.FREELANCER ? 'Freelance Consultant' : 
-                        currentRole === UserRole.BROKER ? 'Real Estate Broker' : 'User'
+                        auth.user?.name
+                          ? auth.user.name.replace(/\s*\([^)]*\)\s*$/, '')
+                          : currentRole === UserRole.CLIENT ? 'Developer' : 
+                            currentRole === UserRole.VENDOR ? 'Vendor / Partner' : 
+                            currentRole === UserRole.PMC ? 'PMC / Site Quality Consultant' :
+                            currentRole === UserRole.LABOUR ? 'Skilled Worker' : 
+                            currentRole === UserRole.MATERIAL_SUPPLIER ? 'Material Supplier' :
+                            currentRole === UserRole.JOB ? 'Construction & Engineering Staff' :
+                            currentRole === UserRole.FREELANCER ? 'Freelance Consultant' : 
+                            currentRole === UserRole.BROKER ? 'Real Estate Broker' : 
+                            currentRole === UserRole.CHANNEL_PARTNER ? 'Channel Partner' : 
+                            currentRole === UserRole.ARCHITECT ? 'Architect' :
+                            currentRole === UserRole.RMC ? 'RMC Concrete Partner' :
+                            currentRole === UserRole.CONSULTANT ? 'Structural & Civil Consultant' :
+                            currentRole === UserRole.CONSTRUCTION_FACTORY ? 'Construction Factory' :
+                            currentRole === UserRole.MEP ? 'MEP Staff & Supervisor' : 'User'
                       }</>
                     ) : (
                       <>Welcome to Construction Mart SHK</>
@@ -2236,7 +2881,7 @@ const App: React.FC = () => {
                     {currentRole ? "Here is what's happening with your projects today." : "India's leading construction & interior marketplace. Browse projects, hire labour, compare market rates and more — sign in to unlock your dashboard."}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 relative">
                   {/* Style block for animations */}
                   <style>{`
                     @keyframes custom-buzz {
@@ -2385,26 +3030,462 @@ const App: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Post New Request Button */}
-                  {(currentRole === UserRole.CLIENT || 
-                    currentRole === UserRole.VENDOR || 
-                    currentRole === UserRole.LABOUR || 
-                    currentRole === UserRole.MATERIAL_SUPPLIER || 
-                    currentRole === UserRole.JOB ||
-                    currentRole === UserRole.FREELANCER) && (
-                    <button 
-                      onClick={() => setShowNewProjectModal(true)}
-                      className="flex items-center justify-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-lg hover:bg-orange-700 transition-colors font-medium shadow-sm shadow-orange-200"
-                    >
-                      <Plus size={20} />
-                      Post New Request
-                    </button>
+                  {/* Post New Request Button for all main requirements */}
+                  {Boolean(currentRole) && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setShowPostReqDropdown(!showPostReqDropdown);
+                          setShowClientRequiresDropdown(false);
+                          setShowContractorRequiresDropdown(false);
+                        }}
+                        className="flex items-center justify-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-lg hover:bg-orange-700 transition-colors font-medium shadow-sm shadow-orange-200"
+                      >
+                        + Post Vacancy
+                        <ChevronDown size={16} className={`transition-transform duration-200 ${showPostReqDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {showPostReqDropdown && (
+                        <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 overflow-hidden">
+                          <div className="px-3.5 py-2.5 bg-orange-50 border-b border-orange-100 flex items-center justify-between">
+                            <span className="text-[10px] font-black text-orange-800 uppercase tracking-wider">
+                              Select Requirement Category
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowPostReqDropdown(false)}
+                              className="text-orange-600 hover:text-orange-800"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                          <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                            {MAIN_REQUIREMENT_CATEGORIES.map((cat) => (
+                              <button
+                                key={cat.key}
+                                type="button"
+                                onClick={() => {
+                                  setNewProjectCategory(cat.key);
+                                  setShowPostReqDropdown(false);
+                                  setShowNewProjectModal(true);
+                                }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-orange-50 transition-colors flex items-start justify-between gap-2 group"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-xs font-black text-gray-800 group-hover:text-orange-700">
+                                    {cat.label} Requirement
+                                  </p>
+                                  <p className="text-[10px] text-gray-500 truncate mt-0.5">
+                                    {cat.desc}
+                                  </p>
+                                </div>
+                                <span className={`shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full border uppercase ${cat.badgeCls}`}>
+                                  Post
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* Instant Labours Separate Section for Developer and Vendor */}
-              {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR) && (
+              {/* DASHBOARD ROLE PORTALS: ALL LOGINS & REGISTRATIONS IN EXACT SEQUENCE */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-orange-200/90 shadow-sm space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 bg-orange-600 text-white text-[10px] font-black rounded-full uppercase tracking-wider shadow-xs">
+                        Ecosystem Portals Directory
+                      </span>
+                      <span className="text-[11px] font-extrabold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
+                        All 14 Partner Roles · Login & Registration
+                      </span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mt-1.5 flex items-center gap-2">
+                      <Building2 className="text-orange-600" size={24} />
+                      Logins & Registrations
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                      Access specialized logins and registrations in sequence: Developer, Vendor, PMC, Labour, Material Supplier, Construction & Engineering Staff, Freelancer, Broker, Channel Partner, followed by Architect, RMC, Consultant, Construction Factory & MEP.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => openLogin('login')}
+                      className="px-3.5 py-2 bg-white hover:bg-orange-50 border border-gray-200 hover:border-orange-300 text-gray-800 text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                    >
+                      <LogIn size={14} className="text-orange-600" />
+                      <span>Switch Login</span>
+                    </button>
+                    <button
+                      onClick={() => openLogin('register')}
+                      className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black rounded-xl transition-all shadow-sm shadow-orange-200 flex items-center gap-1.5"
+                    >
+                      <UserPlus size={14} />
+                      <span>+ Register Role</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1. Previous Logins & Registrations: Developer through Channel Partner */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-700"></span>
+                      1. Core Platform Roles (Up to Channel Partner)
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-semibold">Previous Portals Maintained</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3.5">
+                    {[
+                      { role: UserRole.CLIENT, label: 'Developer', desc: 'Civil tenders, contracting & escrow', img: developerSymbolImg, icon: Building2, color: 'text-orange-600', ring: 'ring-orange-200', tag: 'Developer' },
+                      { role: UserRole.VENDOR, label: 'Vendor', desc: 'Turnkey civil contracting & bids', img: vendorSymbolImg, icon: Briefcase, color: 'text-teal-600', ring: 'ring-teal-200', tag: 'Contractor' },
+                      { role: UserRole.PMC, label: 'PMC', desc: 'Site QA/QC audits & measurement verification', img: pmcSymbolImg, icon: ShieldCheck, color: 'text-cyan-600', ring: 'ring-cyan-200', tag: 'Supervision' },
+                      { role: UserRole.LABOUR, label: 'Labour', desc: 'Skilled masons, bar benders & helpers', img: labourSymbolImg, icon: HardHat, color: 'text-yellow-600', ring: 'ring-yellow-200', tag: 'Daily Wage' },
+                      { role: UserRole.MATERIAL_SUPPLIER, label: 'Material Supplier', desc: 'Bulk cement, steel, sand & raw gear', img: supplierSymbolImg, icon: Package, color: 'text-emerald-600', ring: 'ring-emerald-200', tag: 'Supplier' },
+                      { role: UserRole.JOB, label: 'Construction and Engineering Staff', desc: 'Civil site engineers, surveyors & technical staff careers', img: jobSymbolImg, icon: GraduationCap, color: 'text-purple-600', ring: 'ring-purple-200', tag: 'Staff' },
+                      { role: UserRole.FREELANCER, label: 'Freelancer', desc: 'AutoCAD drafts, BBS steel & estimation', img: freelancerSymbolImg, icon: Sparkles, color: 'text-pink-600', ring: 'ring-pink-200', tag: 'CAD / BBS' },
+                      { role: UserRole.BROKER, label: 'Broker', desc: 'RERA outright properties & mandates', img: brokerSymbolImg, icon: Home, color: 'text-violet-600', ring: 'ring-violet-200', tag: 'Real Estate' },
+                      { role: UserRole.CHANNEL_PARTNER, label: 'Channel Partner', desc: 'Client referrals & verified commission payouts', img: brokerSymbolImg, icon: Share2, color: 'text-sky-600', ring: 'ring-sky-200', tag: 'Partner' },
+                    ].map((item) => {
+                      const IconComp = item.icon;
+                      return (
+                        <div key={item.role} className="bg-gray-50/70 hover:bg-white border border-gray-200 hover:border-orange-300 rounded-2xl p-4 transition-all flex flex-col justify-between shadow-xs hover:shadow-md group">
+                          <div>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className={`w-11 h-11 rounded-xl overflow-hidden shrink-0 ring-1 ${item.ring} bg-white flex items-center justify-center relative shadow-xs`}>
+                                <img 
+                                  src={item.img} 
+                                  alt={item.label} 
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform relative z-10" 
+                                  onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                                />
+                                <IconComp size={20} className={`${item.color} absolute`} />
+                              </div>
+                              <span className="text-[9px] font-bold text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                                {item.tag}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-extrabold text-gray-900 group-hover:text-orange-600 transition-colors">
+                              {item.label}
+                            </h4>
+                            <p className="text-[11px] text-gray-500 leading-snug mt-1 line-clamp-2">
+                              {item.desc}
+                            </p>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-gray-150 space-y-1.5">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openLogin('login', item.role)}
+                                className="flex-1 py-1.5 px-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                              >
+                                <LogIn size={12} />
+                                <span>Login</span>
+                              </button>
+                              <button
+                                onClick={() => openLogin('register', item.role)}
+                                className="flex-1 py-1.5 px-2 bg-white hover:bg-orange-50 border border-gray-200 hover:border-orange-300 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                              >
+                                <UserPlus size={12} className="text-orange-600" />
+                                <span>Register</span>
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => setCurrentRole(item.role)}
+                              className="w-full py-1 text-[10px] font-bold text-gray-600 hover:text-orange-600 hover:bg-orange-50/50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                            >
+                              <span>Switch View</span>
+                              <ArrowRight size={10} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Added After Channel Partner: Architect, RMC, Consultant, Construction Factory, MEP */}
+                <div className="pt-2 border-t-2 border-dashed border-orange-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-black uppercase tracking-wider text-orange-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
+                      2. Added After Channel Partner (Architect · RMC · Consultant · Construction Factory · MEP)
+                    </span>
+                    <span className="text-[10px] font-black text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-300">
+                      High Priority Portals
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    {/* 10. Architect */}
+                    <div className="bg-gradient-to-b from-indigo-50/50 via-white to-white border-2 border-indigo-200 hover:border-indigo-400 rounded-2xl p-4 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col justify-between group">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="w-13 h-13 rounded-2xl overflow-hidden shadow-sm ring-2 ring-indigo-200 group-hover:ring-indigo-400 transition-all relative bg-indigo-50 flex items-center justify-center shrink-0">
+                            <img 
+                              src={architectSymbolImg} 
+                              alt="Architect" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10"
+                              onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                            />
+                            <Compass size={26} className="text-indigo-600 absolute" />
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            Architect Studio
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-gray-900 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                          <Compass size={16} className="text-indigo-600 shrink-0" />
+                          Architect
+                        </h3>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                          Architectural drawings, 2D floor plans, municipal sanction drawings & 3D exterior elevations.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-indigo-100 space-y-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openLogin('login', UserRole.ARCHITECT)}
+                            className="flex-1 py-2 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <LogIn size={13} />
+                            <span>Login</span>
+                          </button>
+                          <button
+                            onClick={() => openLogin('register', UserRole.ARCHITECT)}
+                            className="flex-1 py-2 px-2 bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1"
+                          >
+                            <UserPlus size={13} className="text-indigo-600" />
+                            <span>Register</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCurrentRole(UserRole.ARCHITECT)}
+                          className="w-full py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Switch Active View to Architect</span>
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 11. RMC */}
+                    <div className="bg-gradient-to-b from-amber-50/50 via-white to-white border-2 border-amber-200 hover:border-amber-400 rounded-2xl p-4 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col justify-between group">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="w-13 h-13 rounded-2xl overflow-hidden shadow-sm ring-2 ring-amber-200 group-hover:ring-amber-400 transition-all relative bg-amber-50 flex items-center justify-center shrink-0">
+                            <img 
+                              src={rmcSymbolImg} 
+                              alt="RMC Plant" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10"
+                              onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                            />
+                            <Truck size={26} className="text-amber-600 absolute" />
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Batching Plant
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-gray-900 group-hover:text-amber-600 transition-colors flex items-center gap-1.5">
+                          <Truck size={16} className="text-amber-600 shrink-0" />
+                          RMC (Ready Mix)
+                        </h3>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                          Ready-Mix Concrete batching dispatch, transit mixer logistics & boom pump scheduling.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-amber-100 space-y-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openLogin('login', UserRole.RMC)}
+                            className="flex-1 py-2 px-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <LogIn size={13} />
+                            <span>Login</span>
+                          </button>
+                          <button
+                            onClick={() => openLogin('register', UserRole.RMC)}
+                            className="flex-1 py-2 px-2 bg-white hover:bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1"
+                          >
+                            <UserPlus size={13} className="text-amber-600" />
+                            <span>Register</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCurrentRole(UserRole.RMC)}
+                          className="w-full py-1 text-[10px] font-bold text-amber-700 hover:bg-amber-50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Switch Active View to RMC</span>
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 12. Consultant */}
+                    <div className="bg-gradient-to-b from-blue-50/50 via-white to-white border-2 border-blue-200 hover:border-blue-400 rounded-2xl p-4 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col justify-between group">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="w-13 h-13 rounded-2xl overflow-hidden shadow-sm ring-2 ring-blue-200 group-hover:ring-blue-400 transition-all relative bg-blue-50 flex items-center justify-center shrink-0">
+                            <img 
+                              src={consultantSymbolImg} 
+                              alt="Consultant" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10"
+                              onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                            />
+                            <FileCheck2 size={26} className="text-blue-600 absolute" />
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                            Civil & Structural
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                          <FileCheck2 size={16} className="text-blue-600 shrink-0" />
+                          Consultant
+                        </h3>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                          Structural engineering, stability certificates, geotech soil tests & independent quality audits.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-blue-100 space-y-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openLogin('login', UserRole.CONSULTANT)}
+                            className="flex-1 py-2 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <LogIn size={13} />
+                            <span>Login</span>
+                          </button>
+                          <button
+                            onClick={() => openLogin('register', UserRole.CONSULTANT)}
+                            className="flex-1 py-2 px-2 bg-white hover:bg-blue-50 border border-blue-200 text-blue-900 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1"
+                          >
+                            <UserPlus size={13} className="text-blue-600" />
+                            <span>Register</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCurrentRole(UserRole.CONSULTANT)}
+                          className="w-full py-1 text-[10px] font-bold text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Switch Active View to Consultant</span>
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 13. Construction Factory */}
+                    <div className="bg-gradient-to-b from-stone-100/70 via-white to-white border-2 border-stone-300 hover:border-stone-500 rounded-2xl p-4 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col justify-between group">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="w-13 h-13 rounded-2xl overflow-hidden shadow-sm ring-2 ring-stone-300 group-hover:ring-stone-500 transition-all relative bg-stone-100 flex items-center justify-center shrink-0">
+                            <img 
+                              src={factorySymbolImg} 
+                              alt="Construction Factory" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10"
+                              onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                            />
+                            <Factory size={26} className="text-stone-700 absolute" />
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-stone-200 text-stone-800 border border-stone-300">
+                            Manufacturing
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-gray-900 group-hover:text-stone-800 transition-colors flex items-center gap-1.5">
+                          <Factory size={16} className="text-stone-700 shrink-0" />
+                          Construction Factory
+                        </h3>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                          Precast concrete panels, AAC blocks, cement batch plant & building manufacturing equipment.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-stone-200 space-y-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openLogin('login', UserRole.CONSTRUCTION_FACTORY)}
+                            className="flex-1 py-2 px-2 bg-stone-800 hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <LogIn size={13} />
+                            <span>Login</span>
+                          </button>
+                          <button
+                            onClick={() => openLogin('register', UserRole.CONSTRUCTION_FACTORY)}
+                            className="flex-1 py-2 px-2 bg-white hover:bg-stone-100 border border-stone-300 text-stone-900 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1"
+                          >
+                            <UserPlus size={13} className="text-stone-700" />
+                            <span>Register</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCurrentRole(UserRole.CONSTRUCTION_FACTORY)}
+                          className="w-full py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Switch Active View to Factory</span>
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 14. MEP */}
+                    <div className="bg-gradient-to-b from-amber-50/50 via-white to-white border-2 border-amber-300 hover:border-amber-500 rounded-2xl p-4 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col justify-between group">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="w-13 h-13 rounded-2xl overflow-hidden shadow-sm ring-2 ring-amber-300 group-hover:ring-amber-500 transition-all relative bg-amber-50 flex items-center justify-center shrink-0">
+                            <img 
+                              src={mepSymbolImg} 
+                              alt="MEP" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10" 
+                              onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                            />
+                            <Wrench size={26} className="text-amber-800 absolute" />
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                            MEP Services
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-gray-900 group-hover:text-amber-800 transition-colors flex items-center gap-1.5">
+                          <Wrench size={16} className="text-amber-800 shrink-0" />
+                          MEP Staff & Supervisor
+                        </h3>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                          Mechanical, electrical & plumbing staff, supervisors, engineers & labour.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-amber-200 space-y-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openLogin('login', UserRole.MEP)}
+                            className="flex-1 py-2 px-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <LogIn size={13} />
+                            <span>Login</span>
+                          </button>
+                          <button
+                            onClick={() => openLogin('register', UserRole.MEP)}
+                            className="flex-1 py-2 px-2 bg-white hover:bg-amber-50 border border-amber-300 text-amber-900 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1"
+                          >
+                            <UserPlus size={13} className="text-amber-800" />
+                            <span>Register</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCurrentRole(UserRole.MEP)}
+                          className="w-full py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-100/60 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Switch Active View to MEP</span>
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instant Labour (Labour Naka) Separate Section */}
+              {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR || currentRole === UserRole.PMC || currentRole === UserRole.MATERIAL_SUPPLIER || currentRole === UserRole.BROKER || currentRole === UserRole.CHANNEL_PARTNER || currentRole === UserRole.FREELANCER || currentRole === UserRole.ARCHITECT || currentRole === UserRole.RMC || currentRole === UserRole.CONSULTANT || currentRole === UserRole.CONSTRUCTION_FACTORY || currentRole === UserRole.MEP) && (
                 <InstantLaboursSection currentRole={currentRole} />
               )}
 
@@ -2419,7 +3500,7 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm col-span-2">
                       <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        👷 Active Instant Labour Requests
+                        👷 Active Instant Labour (Labour Naka) Requests
                       </h3>
                       <div className="space-y-3">
                         {labourRequests.length === 0 ? (
@@ -2463,7 +3544,7 @@ const App: React.FC = () => {
                       {/* Section for Material Supplier Instant Yard Bookings */}
                       <div className="mt-8 pt-6 border-t border-gray-100">
                         <h3 className="text-sm font-black text-gray-800 mb-4 flex items-center gap-2">
-                          ⚡ Instant Yard Labour Requirements (From Material Suppliers)
+                          ⚡ Instant Yard Labour (Labour Naka) Requirements (From Material Suppliers)
                         </h3>
                         {supplierBookings.length === 0 ? (
                           <p className="text-xs text-gray-500 font-medium">No active material yard labour requests at this moment.</p>
@@ -2823,110 +3904,108 @@ const App: React.FC = () => {
                 </>
               )}
 
-              {/* GLOBAL OUR SERVICES IN HORIZONTAL ORIENTATION FOR ALL LOGIN PAGES */}
-              {(currentRole === UserRole.CLIENT || currentRole === UserRole.VENDOR || currentRole === UserRole.LABOUR || currentRole === UserRole.JOB || currentRole === UserRole.FREELANCER) && (
-                <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm transition-all duration-300">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-gray-100">
-                    <h3 className="font-bold text-gray-800 text-base flex items-center gap-2">
-                      <Hammer size={18} className="text-orange-500" />
-                      Our Services
-                    </h3>
-                    
-                    {/* Sliding Control Bar */}
-                    <div className="flex items-center gap-3 bg-orange-50/50 px-3 py-1.5 rounded-xl border border-orange-200/80 self-start sm:self-auto shadow-sm">
-                      <span className="text-[10px] font-bold text-orange-850 uppercase select-none tracking-wider">
-                        Height Slider: {servicesHeight === 0 ? "Minimized" : servicesHeight === 100 ? "Expanded" : `${servicesHeight}%`}
-                      </span>
-                      
-                      {/* Range Input Slider (Slide to control height) */}
-                      <input 
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={servicesHeight}
-                        onChange={(e) => setServicesHeight(Number(e.target.value))}
-                        className="w-24 sm:w-32 h-1.5 bg-orange-100 rounded-lg appearance-none cursor-pointer accent-orange-600 transition-all focus:outline-none"
-                        style={{
-                          background: `linear-gradient(to right, #ea580c 0%, #ea580c ${servicesHeight}%, #fed7aa ${servicesHeight}%, #fed7aa 100%)`
-                        }}
-                        title="Slide UP / DOWN to adjust height"
-                      />
-                      
-                      {/* Quick up / down slide buttons */}
-                      <div className="flex items-center border-l border-orange-200/80 pl-2 gap-1">
-                        <button
-                          onClick={() => setServicesHeight(0)}
-                          className={`p-1 rounded hover:bg-orange-100/80 transition-colors ${servicesHeight === 0 ? 'text-orange-600 bg-orange-100' : 'text-orange-500'}`}
-                          title="Slide Up (Minimize)"
-                        >
-                          <ChevronUp size={14} />
-                        </button>
-                        <button
-                          onClick={() => setServicesHeight(35)}
-                          className={`p-1 rounded hover:bg-orange-100/80 transition-colors ${servicesHeight === 35 ? 'text-orange-600 bg-orange-100 font-black' : 'text-orange-500 font-bold'}`}
-                          title="Compact View"
-                        >
-                          <span className="text-[9px] px-0.5">MID</span>
-                        </button>
-                        <button
-                          onClick={() => setServicesHeight(100)}
-                          className={`p-1 rounded hover:bg-orange-100/80 transition-colors ${servicesHeight === 100 ? 'text-orange-600 bg-orange-100' : 'text-orange-500'}`}
-                          title="Slide Down (Expand Fully)"
-                        >
-                          <ChevronDown size={14} />
-                        </button>
+              {/* GLOBAL OUR SERVICES SLIDER (FIXED-HEIGHT HORIZONTAL SLIDER + POP-UP FULL CATALOG) */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-150 shadow-sm transition-all">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0">
+                      <Hammer size={18} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-extrabold text-gray-900 text-base">
+                          Our Services Directory
+                        </h3>
+                        <span className="hidden sm:inline-flex text-[10px] font-black text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          15 Verticals · 85+ Services
+                        </span>
                       </div>
+                      <p className="text-xs text-gray-500">
+                        Slide horizontally across verticals or pop-up the complete catalog without stretching page length.
+                      </p>
                     </div>
                   </div>
 
-                  {/* Minimized alert message */}
-                  {servicesHeight === 0 ? (
-                    <div 
-                      onClick={() => setServicesHeight(100)} 
-                      className="bg-orange-50/50 hover:bg-orange-100/55 border border-dashed border-orange-200 p-4 rounded-xl flex items-center justify-between cursor-pointer transition-all group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                        <span className="text-xs font-semibold text-orange-850">Our Services Catalog is Minimized</span>
-                        <span className="hidden sm:inline text-[10px] text-gray-400">(Drag the slider right or click this bar to slide it down)</span>
-                      </div>
-                      <span className="text-xs font-bold text-orange-600 flex items-center gap-1 group-hover:translate-y-0.5 transition-transform">
-                        Slide Down Customizer<ChevronDown size={14} />
-                      </span>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {/* Horizontal slider control buttons */}
+                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-0.5">
+                      <button
+                        onClick={() => servicesCarouselRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+                        className="p-1.5 hover:bg-white text-gray-600 hover:text-orange-600 rounded-lg transition-all shadow-2xs"
+                        title="Slide Left"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => servicesCarouselRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+                        className="p-1.5 hover:bg-white text-gray-600 hover:text-orange-600 rounded-lg transition-all shadow-2xs"
+                        title="Slide Right"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
                     </div>
-                  ) : null}
 
-                  {/* Slideable & Scrollable Container */}
-                  <div 
-                    className="overflow-hidden transition-all duration-300"
-                    style={{ 
-                      maxHeight: servicesHeight === 0 ? '0px' : servicesHeight === 100 ? '1200px' : `${Math.max(60, servicesHeight * 4.2)}px`,
-                      opacity: servicesHeight === 0 ? 0 : 1,
-                      overflowY: servicesHeight === 100 ? 'visible' : 'auto',
-                      paddingTop: servicesHeight === 0 ? '0px' : '4px'
-                    }}
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pb-2">
-                      {DETAILED_SERVICES.map((section, idx) => (
-                        <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-gray-100 transition-all hover:bg-white hover:shadow-sm">
-                          <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-1.5 text-xs pb-1 border-b border-gray-200">
-                            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
-                            {section.category.replace(' Services', '')}
-                          </h4>
-                          <ul className="space-y-1 pl-1">
-                            {section.items.map((item, i) => (
-                              <li key={i} className="text-[10px] text-gray-500 flex items-start gap-1">
-                                <span className="text-orange-500">•</span>
-                                <span className="leading-snug">{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
+                    {/* Pop-up Full Catalog Button */}
+                    <button
+                      onClick={() => setShowServicesPopupModal(true)}
+                      className="px-3.5 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-xl text-xs font-black transition-all shadow-sm shadow-orange-200 flex items-center gap-1.5 active:scale-95"
+                    >
+                      <Sparkles size={14} className="animate-pulse" />
+                      <span>Pop-Up Catalog</span>
+                    </button>
                   </div>
                 </div>
-              )}
+
+                {/* Fixed-Height Horizontal Slider */}
+                <div 
+                  ref={servicesCarouselRef}
+                  className="flex gap-4 overflow-x-auto scroll-smooth py-1 px-0.5 custom-scrollbar snap-x snap-mandatory"
+                  style={{ maxHeight: '250px' }}
+                >
+                  {DETAILED_SERVICES.map((section, idx) => (
+                    <div 
+                      key={idx} 
+                      className="min-w-[270px] sm:min-w-[300px] max-w-[300px] snap-start bg-slate-50/80 hover:bg-white border border-gray-200 hover:border-orange-300 rounded-2xl p-4 flex flex-col justify-between transition-all shadow-2xs hover:shadow-md group h-[230px]"
+                    >
+                      <div className="overflow-hidden">
+                        <div className="flex items-center justify-between gap-1 mb-2 pb-1.5 border-b border-gray-200/80">
+                          <h4 className="font-extrabold text-gray-900 text-xs truncate group-hover:text-orange-600 transition-colors flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>
+                            <span className="truncate">{section.category.replace(' Services', '')}</span>
+                          </h4>
+                          <span className="text-[9px] font-bold text-gray-500 bg-white border border-gray-200 px-1.5 py-0.5 rounded-md shrink-0">
+                            {section.items.length} items
+                          </span>
+                        </div>
+                        <ul className="space-y-1 pl-1">
+                          {section.items.slice(0, 5).map((item, i) => (
+                            <li key={i} className="text-[11px] text-gray-600 flex items-start gap-1.5 truncate">
+                              <CheckCircle2 size={11} className="text-orange-500 shrink-0 mt-0.5" />
+                              <span className="truncate">{item}</span>
+                            </li>
+                          ))}
+                          {section.items.length > 5 && (
+                            <li className="text-[10px] text-orange-600 font-bold pl-4">
+                              +{section.items.length - 5} more specialized services...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setSelectedServiceCategoryTab(section.category);
+                          setShowServicesPopupModal(true);
+                        }}
+                        className="mt-2 pt-2 border-t border-gray-150 text-[11px] font-black text-orange-600 group-hover:text-orange-700 flex items-center justify-between w-full"
+                      >
+                        <span>View full list in pop-up</span>
+                        <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
               
             </div>
           )}
@@ -3196,7 +4275,43 @@ const App: React.FC = () => {
       )}
 
       {showNewProjectModal && (
-        <PostRequestModal onClose={() => setShowNewProjectModal(false)} initialTab="project" />
+        <PostRequestModal
+          onClose={() => setShowNewProjectModal(false)}
+          initialTab="project"
+          initialCategory={newProjectCategory}
+          onPosted={(req) => {
+            if (req.kind === 'project') {
+              const reqCatMap: Record<string, 'Labours' | 'Materials' | 'Staff'> = {
+                Material: 'Materials',
+                Labour: 'Labours',
+                Engineer: 'Staff',
+                PMC: 'Staff',
+                Consultant: 'Staff',
+                Architect: 'Staff',
+                Freelancer: 'Staff',
+                Vendor: 'Labours',
+                'Property Agents': 'Staff',
+              };
+              setClientReqs((prev) => [
+                {
+                  id: req.id,
+                  title: req.title || `${req.requirementCategory || 'Project'} Requirement`,
+                  category: req.requirementCategory || 'General',
+                  reqCategory: reqCatMap[req.requirementCategory || 'Vendor'] || 'Labours',
+                  requesterType: currentRole === UserRole.VENDOR ? 'Contractor' : 'Client',
+                  budget: req.paymentPerDay || 'As per quote',
+                  location: req.location || 'Mumbai',
+                  urgency: 'Immediate',
+                  postedTime: 'Just now',
+                  description: req.description || 'Direct requirement posted on Construction Mart SHK.',
+                  client: req.userName || 'Verified Member',
+                  status: 'Open',
+                },
+                ...prev,
+              ]);
+            }
+          }}
+        />
       )}
 
       {selectedProjectForPayment && (
@@ -3268,30 +4383,21 @@ const App: React.FC = () => {
                       <p className="text-xs text-gray-500">Founder & Chief Director</p>
                     </div>
                   </div>
-                  <a
-                    href="https://wa.me/9326294480"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-650 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
-                  >
-                    <MessageSquare size={14} /> WhatsApp
-                  </a>
                 </div>
 
-                <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-400">Direct Contact Number</p>
-                    <p className="text-sm font-mono font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
-                      <Phone size={14} className="text-orange-500" />
-                      9326294480
-                    </p>
+                <div className="border-t border-gray-100 pt-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 font-medium">Support Helpdesk:</span>
+                    <span className="font-bold text-gray-800">24/7 Verified In-App Support</span>
                   </div>
-                  <a 
-                    href="tel:9326294480"
-                    className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
-                  >
-                    Call Now
-                  </a>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 font-medium">Official Helpdesk:</span>
+                    <span className="font-mono font-bold text-orange-600">support@constructionmartshk.com</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 font-medium">Headquarters:</span>
+                    <span className="font-medium text-gray-700">Mumbai Central, India</span>
+                  </div>
                 </div>
               </div>
 

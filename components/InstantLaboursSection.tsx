@@ -139,7 +139,7 @@ export const InstantLaboursSection: React.FC<InstantLaboursSectionProps> = ({ cu
             rating: ratingVal
           };
         });
-        showFeedback('⚡ Local labour team has accepted your shift broadcast! Please review & finalize booking.', 'info');
+        showFeedback('⚡ Local Labour Naka team has accepted your shift broadcast! Please review & finalize booking.', 'info');
       }, 4000);
     }
     return () => clearTimeout(timeout);
@@ -174,7 +174,7 @@ export const InstantLaboursSection: React.FC<InstantLaboursSectionProps> = ({ cu
     
     setBookings(prev => [newBk, ...prev]);
     setActiveBooking(newBk);
-    showFeedback(`Your instant labour request ${newId} (${instantCount} ${instantLaborType}) has been broadcasted successfully!`, 'success');
+    showFeedback(`Your Instant Labour (Labour Naka) request ${newId} (${instantCount} ${instantLaborType}) has been broadcasted successfully!`, 'success');
   };
 
   const finalizeBooking = (bookingId: string) => {
@@ -199,7 +199,7 @@ export const InstantLaboursSection: React.FC<InstantLaboursSectionProps> = ({ cu
       setActiveBooking(null);
     }
     await removeBooking(bookingId);
-    showFeedback('Instant labour request removed.', 'info');
+    showFeedback('Instant Labour (Labour Naka) request removed.', 'info');
   };
 
   return (
@@ -212,7 +212,7 @@ export const InstantLaboursSection: React.FC<InstantLaboursSectionProps> = ({ cu
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg sm:text-xl font-extrabold tracking-tight">Instant Labours Section</h3>
+              <h3 className="text-lg sm:text-xl font-extrabold tracking-tight">Instant Labour (Labour Naka)</h3>
               <span className="bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                 {currentRole === UserRole.CLIENT ? 'Developer Access' : 'Vendor Access'}
               </span>
@@ -434,7 +434,7 @@ export const InstantLaboursSection: React.FC<InstantLaboursSectionProps> = ({ cu
                   className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black py-3.5 rounded-xl shadow-md hover:shadow-red-200 transition-all text-xs tracking-wider uppercase flex items-center justify-center gap-2"
                 >
                   <Zap size={16} className="text-yellow-300" />
-                  Broadcast Instant Labour Shift
+                  Broadcast Instant Labour (Labour Naka) Shift
                 </button>
               </form>
             </div>

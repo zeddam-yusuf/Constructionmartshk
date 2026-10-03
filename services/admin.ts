@@ -40,16 +40,13 @@ export interface AdminNewUser {
   phone: string;
   role: string;
   password: string;
-  category?: string;
-  subCategory?: string;
-  state?: string;
-  city?: string;
-  remarks?: string;
-  experience?: string;
-  gstNumber?: string;
-  charges?: string;
   email?: string;
+  city?: string;
   companyName?: string;
+  category?: string;
+  experience?: string;
+  charges?: string;
+  gstNumber?: string;
 }
 
 export const adminCreateUser = async (input: AdminNewUser): Promise<void> => {
@@ -63,19 +60,17 @@ export const adminCreateUser = async (input: AdminNewUser): Promise<void> => {
   const user: StoredUser = {
     id: crypto.randomUUID(),
     name: String(input.name).trim(),
-    role: input.role,
-    category: input.category || undefined,
-    password_hash: `${salt}:${hash}`,
-    subCategory: input.subCategory || input.companyName || undefined,
-    state: input.state || undefined,
-    city: input.city || undefined,
-    remarks: input.remarks || undefined,
-    experience: input.experience || undefined,
-    gstNumber: input.gstNumber || undefined,
-    charges: input.charges || undefined,
-    email: input.email || undefined,
-    status: 'active',
     phone: String(input.phone).trim(),
+    role: input.role,
+    password_hash: `${salt}:${hash}`,
+    status: 'active',
+    email: input.email || undefined,
+    city: input.city || undefined,
+    companyName: input.companyName || undefined,
+    category: input.category || undefined,
+    experience: input.experience || undefined,
+    charges: input.charges || undefined,
+    gstNumber: input.gstNumber || undefined,
     created_at: new Date().toISOString(),
   };
   await dbUpsertUser(user);

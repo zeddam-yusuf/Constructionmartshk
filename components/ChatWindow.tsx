@@ -123,10 +123,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ currentUserRole, messages, onSe
     return list;
   }, [myMessages, extraPeers]);
 
-  // auto-select first conversation by default (desktop only — keep list visible on mobile)
+  // auto-select first conversation by default
   useEffect(() => {
     if (!selectedPeerId && conversations.length > 0) {
-      if (typeof window !== 'undefined' && window.innerWidth < 1024) return;
       setSelectedPeerId(conversations[0].peerId);
     }
   }, [conversations, selectedPeerId]);

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 const ROLE_OPTIONS = [
-  'CLIENT', 'VENDOR', 'PMC', 'CHANNEL_PARTNER', 'LABOUR', 'MATERIAL_SUPPLIER', 'JOB SEEKER', 'FREELANCER', 'BROKER',
+  'CLIENT', 'VENDOR', 'PMC', 'CHANNEL_PARTNER', 'LABOUR', 'MATERIAL_SUPPLIER', 'JOB', 'FREELANCER', 'BROKER',
 ];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -30,7 +30,6 @@ const ROLE_COLORS: Record<string, string> = {
   CHANNEL_PARTNER: 'bg-cyan-100 text-cyan-700',
   LABOUR: 'bg-yellow-100 text-yellow-700',
   MATERIAL_SUPPLIER: 'bg-green-100 text-green-700',
-  'JOB SEEKER': 'bg-indigo-100 text-indigo-700',
   JOB: 'bg-indigo-100 text-indigo-700',
   FREELANCER: 'bg-pink-100 text-pink-700',
   BROKER: 'bg-rose-100 text-rose-700',
@@ -72,20 +71,15 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
   const [modal, setModal] = useState<'user' | 'job' | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Add User form — schema: ID, NAME, ROLE, CATEGORY, password_hash, SUB_CATEGORY, STATE, CITY, REMARKS, experience, gst_number, charges, email, status, phone (ID/status auto)
+  // Add User form
   const [nuName, setNuName] = useState('');
   const [nuPhone, setNuPhone] = useState('');
   const [nuRole, setNuRole] = useState('CLIENT');
   const [nuPassword, setNuPassword] = useState('');
-  const [nuCategory, setNuCategory] = useState('');
-  const [nuSubCategory, setNuSubCategory] = useState('');
-  const [nuState, setNuState] = useState('');
   const [nuCity, setNuCity] = useState('');
-  const [nuRemarks, setNuRemarks] = useState('');
-  const [nuExperience, setNuExperience] = useState('');
-  const [nuGstNumber, setNuGstNumber] = useState('');
-  const [nuCharges, setNuCharges] = useState('');
+  const [nuCompany, setNuCompany] = useState('');
   const [nuEmail, setNuEmail] = useState('');
+  const [nuCategory, setNuCategory] = useState('');
 
   // Add Job form
   const [njTitle, setNjTitle] = useState('');
@@ -98,8 +92,7 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
 
   const resetUserForm = () => {
     setNuName(''); setNuPhone(''); setNuRole('CLIENT'); setNuPassword('');
-    setNuCategory(''); setNuSubCategory(''); setNuState(''); setNuCity('');
-    setNuRemarks(''); setNuExperience(''); setNuGstNumber(''); setNuCharges(''); setNuEmail('');
+    setNuCity(''); setNuCompany(''); setNuEmail(''); setNuCategory('');
   };
 
   const resetJobForm = () => {
@@ -114,15 +107,8 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
     try {
       await adminCreateUser({
         name: nuName, phone: nuPhone, role: nuRole, password: nuPassword,
-        category: nuCategory || undefined,
-        subCategory: nuSubCategory || undefined,
-        state: nuState || undefined,
-        city: nuCity || undefined,
-        remarks: nuRemarks || undefined,
-        experience: nuExperience || undefined,
-        gstNumber: nuGstNumber || undefined,
-        charges: nuCharges || undefined,
-        email: nuEmail || undefined,
+        city: nuCity || undefined, companyName: nuCompany || undefined,
+        email: nuEmail || undefined, category: nuCategory || undefined,
       });
       flash('User created.');
       setModal(null);
@@ -467,62 +453,45 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-100 whitespace-nowrap">
-                    <th className="px-3 py-3 font-black">ID</th>
-                    <th className="px-3 py-3 font-black">NAME</th>
-                    <th className="px-3 py-3 font-black">ROLE</th>
-                    <th className="px-3 py-3 font-black">CATEGORY</th>
-                    <th className="px-3 py-3 font-black">SUB CATEGORY</th>
-                    <th className="px-3 py-3 font-black">STATE</th>
-                    <th className="px-3 py-3 font-black">CITY</th>
-                    <th className="px-3 py-3 font-black">REMARKS</th>
-                    <th className="px-3 py-3 font-black">EXPERIENCE</th>
-                    <th className="px-3 py-3 font-black">GST NUMBER</th>
-                    <th className="px-3 py-3 font-black">CHARGES</th>
-                    <th className="px-3 py-3 font-black">EMAIL</th>
-                    <th className="px-3 py-3 font-black">STATUS</th>
-                    <th className="px-3 py-3 font-black">PHONE</th>
-                    <th className="px-3 py-3 font-black">JOINED</th>
-                    <th className="px-3 py-3 font-black text-right">ACTIONS</th>
+                  <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-100">
+                    <th className="px-4 py-3 font-black">User</th>
+                    <th className="px-4 py-3 font-black">Phone</th>
+                    <th className="px-4 py-3 font-black">Role</th>
+                    <th className="px-4 py-3 font-black">Status</th>
+                    <th className="px-4 py-3 font-black">Joined</th>
+                    <th className="px-4 py-3 font-black text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.length === 0 && !usersBusy && (
-                    <tr><td colSpan={16} className="px-4 py-10 text-center text-gray-400 text-sm font-semibold">No users found.</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm font-semibold">No users found.</td></tr>
                   )}
                   {users.map(u => (
                     <tr key={u.id} className="border-b border-gray-50 hover:bg-slate-50">
-                      <td className="px-3 py-3 font-mono text-[11px] text-gray-500" title={u.id}>{u.id.slice(0,8)}…</td>
-                      <td className="px-3 py-3 font-bold text-gray-900 whitespace-nowrap">{u.name}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-gray-900">{u.name}</div>
+                        {u.companyName && <div className="text-xs text-gray-500">{u.companyName}</div>}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-700">{u.phone}</td>
+                      <td className="px-4 py-3">
                         <select
                           value={u.role}
                           onChange={e => changeUserRole(u.id, e.target.value)}
                           disabled={u.role === 'SUPERADMIN'}
                           className={`text-[11px] font-black px-2 py-1 rounded-md border border-transparent ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}
                         >
-                          {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                          {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
                         </select>
                       </td>
-                      <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">{u.category || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">{(u as any).subCategory || (u as any).companyName || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">{(u as any).state || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">{u.city || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 max-w-[160px] truncate" title={u.remarks || ''}>{u.remarks || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">{u.experience || '—'}</td>
-                      <td className="px-3 py-3 font-mono text-xs text-gray-700 whitespace-nowrap">{u.gstNumber || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">{u.charges || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-700 max-w-[160px] truncate" title={u.email || ''}>{u.email || '—'}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-1 rounded-md whitespace-nowrap ${
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-1 rounded-md ${
                           u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                         }`}>
                           {u.status === 'active' ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
                           {u.status === 'active' ? 'Active' : 'Blocked'}
                         </span>
                       </td>
-                      <td className="px-3 py-3 font-mono text-xs text-gray-700 whitespace-nowrap">{u.phone}</td>
-                      <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
                           {u.role !== 'SUPERADMIN' && (
@@ -765,59 +734,38 @@ export const SuperAdminPanel = ({ onLogout }: { onLogout: () => void }) => {
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-gray-600">NAME *</label>
+                <label className="text-xs font-bold text-gray-600">Full name *</label>
                 <input required value={nuName} onChange={e => setNuName(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. Rahul Verma" />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-600">PHONE *</label>
+                <label className="text-xs font-bold text-gray-600">Phone *</label>
                 <input required value={nuPhone} onChange={e => setNuPhone(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. 9876543210" />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-600">PASSWORD HASH *</label>
-                <input required minLength={6} type="password" value={nuPassword} onChange={e => setNuPassword(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="Min 6 chars → hashed" />
+                <label className="text-xs font-bold text-gray-600">Password *</label>
+                <input required minLength={6} type="password" value={nuPassword} onChange={e => setNuPassword(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="Min 6 characters" />
               </div>
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-gray-600">ROLE *</label>
+                <label className="text-xs font-bold text-gray-600">Role *</label>
                 <select value={nuRole} onChange={e => setNuRole(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500">
-                  {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                  {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
                 </select>
-                <p className="text-[10px] text-gray-400 mt-1">ID auto-generated, STATUS defaults to ACTIVE</p>
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-600">CATEGORY</label>
+                <label className="text-xs font-bold text-gray-600">City</label>
+                <input value={nuCity} onChange={e => setNuCity(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600">Company</label>
+                <input value={nuCompany} onChange={e => setNuCompany(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600">Email</label>
+                <input type="email" value={nuEmail} onChange={e => setNuEmail(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600">Category</label>
                 <input value={nuCategory} onChange={e => setNuCategory(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. Cement, Steel" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">SUB CATEGORY</label>
-                <input value={nuSubCategory} onChange={e => setNuSubCategory(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. Residential" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">STATE</label>
-                <input value={nuState} onChange={e => setNuState(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. Maharashtra" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">CITY</label>
-                <input value={nuCity} onChange={e => setNuCity(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. Mumbai" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-gray-600">REMARKS</label>
-                <input value={nuRemarks} onChange={e => setNuRemarks(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="Optional notes" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">EXPERIENCE</label>
-                <input value={nuExperience} onChange={e => setNuExperience(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. 5 years" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">GST NUMBER</label>
-                <input value={nuGstNumber} onChange={e => setNuGstNumber(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. 27AAAPL1234C1ZV" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">CHARGES</label>
-                <input value={nuCharges} onChange={e => setNuCharges(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. ₹700 / day" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600">EMAIL</label>
-                <input type="email" value={nuEmail} onChange={e => setNuEmail(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g. user@example.com" />
               </div>
             </div>
             <div className="p-4 border-t border-gray-100 flex items-center justify-end gap-2">

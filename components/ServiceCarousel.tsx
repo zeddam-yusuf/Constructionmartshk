@@ -45,7 +45,7 @@ const DEFAULT_ITEMS: CarouselItem[] = [
   },
   {
     id: 5,
-    title: "Instant Labour Provision",
+    title: "Instant Labour (Labour Naka) Provision",
     category: "On-Demand Resource Care",
     image: "/src/assets/images/instant_labour_ready_1782069663895.jpg",
     rating: 5,
